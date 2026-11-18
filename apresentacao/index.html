@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="../prototipo/selo.svg">
+<title>Doze Cosméticos · Conheça o sistema</title>
+<meta name="description" content="Como funciona o sistema de gestão da Doze Cosméticos e como ele pode evoluir.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+:root{
+  --amora:#7d3150; --amora-900:#5a2139; --terra:#c97b6b; --terra-2:#e8a593; --blush:#f4dfe0; --rosa:#e8c4c4; --creme:#fbf5f2;
+  --bg:#fbf5f2; --ink:#3a2630; --ink-2:#5c4650; --muted:#76606a; --line:#eddcd8; --ok:#3f7d5a; --ok-2:#e6f2ea;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:#cfa9b1 var(--bg)}
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:var(--bg);font-size:16.5px;line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+svg.i{width:20px;height:20px;stroke-width:1.6;flex:none}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+h1,h2,h3{font-family:Fraunces,serif;font-weight:300;color:var(--amora);letter-spacing:-.01em;margin:0}
+h2{font-size:clamp(30px,4vw,44px);line-height:1.12}
+h2 em,h1 em{font-style:italic;color:var(--terra)}
+h3{font-size:22px;font-weight:400;line-height:1.25}
+p{margin:0}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:#a0503f;margin-bottom:16px}
+.lead{font-size:19px;color:var(--ink-2);max-width:680px;margin-top:18px}
+section{padding:110px 0}
+.sec-head{max-width:760px;margin-bottom:56px}
+
+/* topo */
+.nav{position:sticky;top:0;z-index:10;background:rgba(251,245,242,.85);backdrop-filter:blur(10px);border-bottom:1px solid transparent;transition:border .2s}
+.nav.scrolled{border-color:var(--line)}
+.nav .wrap{display:flex;align-items:center;gap:24px;height:68px}
+.nav .logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:Fraunces,serif;font-size:21px;color:var(--amora)}
+.nav .logo svg{width:34px;height:34px;color:var(--amora)}
+.nav .links{display:flex;gap:22px;margin-left:auto;font-size:14px}
+.nav .links a{text-decoration:none;color:var(--ink-2)}
+.nav .links a:hover{color:var(--amora)}
+.btn{display:inline-flex;align-items:center;gap:10px;background:var(--amora);color:#fff;text-decoration:none;padding:13px 22px;border-radius:12px;font-weight:600;font-size:15px;transition:.2s;border:1px solid var(--amora)}
+.btn:hover{background:var(--amora-900);transform:translateY(-1px);box-shadow:0 10px 24px -12px rgba(125,49,80,.7)}
+.btn.sec{background:transparent;color:var(--amora)}
+.btn.sec:hover{background:var(--blush);box-shadow:none}
+.btn.sm{padding:9px 16px;font-size:14px}
+
+/* hero */
+.hero{padding:80px 0 100px;position:relative;overflow:hidden}
+.hero .wrap{display:grid;grid-template-columns:1.15fr .85fr;gap:60px;align-items:center}
+.hero h1{font-size:clamp(42px,6vw,72px);line-height:1.04}
+.hero .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:34px}
+.hero .selo-big{width:100%;max-width:400px;aspect-ratio:1;color:var(--amora);justify-self:center;--ac:var(--terra);animation:gira 80s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.hero .selo-big{animation:none}}
+.hero .ring{position:absolute;right:-180px;top:-140px;width:620px;height:620px;border-radius:50%;background:radial-gradient(circle,var(--blush) 0%,rgba(244,223,224,0) 70%);z-index:-1}
+.stats{display:flex;gap:36px;margin-top:46px;flex-wrap:wrap}
+.stats div b{display:block;font-family:Fraunces,serif;font-weight:400;font-size:30px;color:var(--amora);line-height:1}
+.stats div span{font-size:13px;color:var(--muted)}
+
+/* dia a dia */
+.dark{background:linear-gradient(170deg,var(--amora) 0%,var(--amora-900) 100%);color:var(--creme)}
+.dark h2{color:#fff}
+.dark .lead{color:var(--rosa)}
+.dark .eyebrow{color:var(--terra-2)}
+.fluxo{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;counter-reset:passo}
+.passo{position:relative;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:24px 20px}
+.passo .n{font-family:Fraunces,serif;font-size:14px;color:var(--terra-2);font-style:italic}
+.passo .ic{width:46px;height:46px;border-radius:13px;background:rgba(255,255,255,.1);display:grid;place-items:center;margin:12px 0 16px;color:#fff}
+.passo b{display:block;color:#fff;font-weight:600;margin-bottom:6px}
+.passo p{font-size:14px;color:var(--rosa);line-height:1.55}
+.passo:not(:last-child)::after{content:"";position:absolute;right:-12px;top:50%;width:10px;height:2px;background:var(--terra-2)}
+
+/* módulos */
+.mods{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.mod{background:#fff;border:1px solid var(--line);border-radius:20px;padding:28px;transition:.25s}
+.mod:hover{transform:translateY(-3px);box-shadow:0 22px 40px -24px rgba(90,33,57,.35);border-color:var(--rosa)}
+.mod .ic{width:50px;height:50px;border-radius:14px;background:var(--blush);color:var(--amora);display:grid;place-items:center;margin-bottom:20px}
+.mod h3{margin-bottom:10px}
+.mod p{color:var(--ink-2);font-size:15px}
+.mod ul{margin:16px 0 0;padding:0;list-style:none;font-size:14px;color:var(--ink-2)}
+.mod li{display:flex;gap:8px;align-items:flex-start;padding:4px 0}
+.mod li svg{width:16px;height:16px;color:var(--terra);margin-top:4px}
+.mod.destaque{grid-column:span 2;background:linear-gradient(135deg,#fff 0%,#fdf0ee 100%)}
+
+/* bipe */
+.bipe{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+.scanner{background:#fff;border:1px solid var(--line);border-radius:24px;padding:34px;box-shadow:0 30px 60px -36px rgba(90,33,57,.4)}
+.barcode{display:flex;gap:3px;height:90px;justify-content:center;align-items:stretch;padding:0 20px;position:relative}
+.barcode i{background:var(--ink);display:block}
+.barcode::after{content:"";position:absolute;left:0;right:0;height:2px;background:#e0453a;box-shadow:0 0 12px 2px rgba(224,69,58,.6);top:0;animation:laser 2.2s ease-in-out infinite}
+@keyframes laser{50%{top:calc(100% - 2px)}}
+@media (prefers-reduced-motion:reduce){.barcode::after{animation:none;top:50%}}
+.digits{text-align:center;font-family:ui-monospace,Menlo,monospace;letter-spacing:.3em;margin-top:10px;color:var(--ink-2)}
+.typing{margin-top:26px;background:var(--creme);border-radius:14px;padding:16px 18px;font-family:ui-monospace,Menlo,monospace;font-size:14px;color:var(--ink-2)}
+.typing .cur{display:inline-block;width:8px;height:16px;background:var(--amora);vertical-align:middle;animation:pisca 1s steps(1) infinite}
+@keyframes pisca{50%{opacity:0}}
+.result{margin-top:14px;display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;border:1px solid var(--line);opacity:0;transform:translateY(6px);transition:.35s}
+.result.on{opacity:1;transform:none}
+.result .ok{width:36px;height:36px;border-radius:10px;background:var(--ok-2);color:var(--ok);display:grid;place-items:center}
+.result small{display:block;color:var(--muted);font-size:12.5px}
+.steps{display:flex;flex-direction:column;gap:22px;margin-top:34px}
+.step{display:flex;gap:16px}
+.step .num{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--amora);color:var(--amora);display:grid;place-items:center;font-family:Fraunces,serif;flex:none}
+.step b{display:block;margin-bottom:2px}
+.step p{color:var(--ink-2);font-size:15px}
+.usos{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:56px}
+.uso{display:flex;gap:14px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px}
+.uso .ic{width:42px;height:42px;border-radius:12px;background:var(--blush);color:var(--amora);display:grid;place-items:center;flex:none}
+.uso b{display:block}
+.uso p{font-size:14px;color:var(--ink-2)}
+
+/* nota + perfis */
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.box{background:#fff;border:1px solid var(--line);border-radius:22px;padding:34px}
+.box h3{margin:14px 0 12px}
+.box p{color:var(--ink-2);font-size:15.5px}
+.box .chip{display:inline-flex;align-items:center;gap:8px;background:var(--blush);color:var(--amora);font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:99px}
+.nf-fluxo{display:flex;align-items:center;gap:8px;margin:24px 0 8px;flex-wrap:wrap;font-size:13px;font-weight:600}
+.nf-fluxo span{display:inline-flex;align-items:center;gap:6px;background:var(--creme);padding:8px 12px;border-radius:10px}
+.nf-fluxo svg.seta{color:var(--terra);width:16px;height:16px}
+.perfis{margin-top:20px;display:flex;flex-direction:column;gap:12px}
+.perfil{display:flex;gap:14px;align-items:flex-start;padding:16px;border-radius:14px;background:var(--creme)}
+.perfil .av{width:40px;height:40px;border-radius:50%;background:var(--amora);color:#fff;display:grid;place-items:center;flex:none}
+.perfil b{display:block}
+.perfil p{font-size:14px}
+
+/* pagamentos */
+.pag{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.pag .box{position:relative}
+.tag{position:absolute;top:22px;right:22px;font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:5px 10px;border-radius:99px;background:var(--ok-2);color:var(--ok)}
+.tag.b{background:var(--blush);color:var(--amora)}
+.tag.c{background:#f1ece4;color:#635434}
+
+/* roadmap */
+.road{position:relative;display:grid;gap:22px}
+.road::before{content:"";position:absolute;left:27px;top:20px;bottom:20px;width:2px;background:linear-gradient(var(--amora),var(--rosa))}
+.fase{display:grid;grid-template-columns:56px 1fr;gap:26px;position:relative}
+.fase .dot{width:56px;height:56px;border-radius:50%;background:#fff;border:2px solid var(--amora);display:grid;place-items:center;color:var(--amora);z-index:1}
+.fase.agora .dot{background:var(--amora);color:#fff;box-shadow:0 0 0 8px var(--blush)}
+.fase .card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:28px 30px}
+.fase .when{font-size:12.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#a0503f}
+.fase h3{margin:6px 0 10px}
+.fase p{color:var(--ink-2);font-size:15.5px}
+.fase ul{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;margin:18px 0 0;padding:0;list-style:none;font-size:14.5px}
+.fase li{display:flex;gap:8px;align-items:flex-start}
+.fase li svg{width:16px;height:16px;color:var(--terra);margin-top:4px}
+
+/* checklist */
+.precisa{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.item{background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px}
+.item .ic{color:var(--amora);margin-bottom:14px}
+.item b{display:block;margin-bottom:6px}
+.item p{font-size:14px;color:var(--ink-2)}
+.item small{display:inline-block;margin-top:12px;font-size:12px;font-weight:600;color:#a0503f}
+
+/* glossário */
+.gloss{display:grid;grid-template-columns:repeat(2,1fr);gap:0 48px}
+.gloss dl{margin:0}
+.gloss div{padding:18px 0;border-bottom:1px solid var(--line)}
+.gloss dt{font-family:Fraunces,serif;font-size:19px;color:var(--amora)}
+.gloss dd{margin:4px 0 0;color:var(--ink-2);font-size:15px}
+
+/* faq */
+.faq details{background:#fff;border:1px solid var(--line);border-radius:16px;margin-bottom:10px;overflow:hidden}
+.faq summary{list-style:none;cursor:pointer;padding:20px 24px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:16px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary svg{color:var(--terra);transition:transform .2s}
+.faq details[open] summary svg{transform:rotate(45deg)}
+.faq details p{padding:0 24px 22px;color:var(--ink-2)}
+
+/* final */
+.final{text-align:center;padding:120px 0}
+.final .selo-sm{width:90px;height:90px;color:var(--terra-2);--ac:var(--terra-2);margin-bottom:24px}
+.final h2{max-width:720px;margin:0 auto}
+.final .lead{margin:18px auto 34px}
+.final .btn{background:var(--creme);color:var(--amora);border-color:var(--creme)}
+.final .btn:hover{background:#fff}
+footer{padding:28px 0;font-size:13px;color:var(--muted);text-align:center}
+
+/* revelar ao rolar */
+.rv{opacity:0;transform:translateY(18px);transition:opacity .7s ease,transform .7s ease}
+.rv.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}}
+
+@media (max-width:960px){
+  section{padding:76px 0}
+  .hero .wrap,.bipe,.duo{grid-template-columns:1fr}
+  .hero .selo-big{max-width:260px;grid-row:1}
+  .fluxo{grid-template-columns:1fr 1fr}
+  .passo::after{display:none}
+  .mods,.pag,.usos{grid-template-columns:1fr 1fr}
+  .mod.destaque{grid-column:span 2}
+  .precisa{grid-template-columns:1fr 1fr}
+  .nav .links{display:none}
+  .nav .btn{margin-left:auto}
+}
+@media (max-width:620px){
+  body{font-size:16px}
+  .wrap{padding:0 16px}
+  .fluxo,.mods,.pag,.usos,.precisa,.gloss,.fase ul{grid-template-columns:1fr}
+  .mod.destaque{grid-column:auto}
+  .fase{grid-template-columns:40px 1fr;gap:14px}
+  .fase .dot{width:40px;height:40px}
+  .road::before{left:19px}
+  .fase .card,.box,.mod{padding:22px}
+  .stats{gap:24px}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="selo" viewBox="0 0 200 200">
+    <circle cx="100" cy="100" r="92" fill="none" stroke="currentColor" stroke-width="2.5"/>
+    <circle cx="100" cy="100" r="62" fill="none" stroke="currentColor" stroke-width="1.2"/>
+    <path id="arc" d="M 100 100 m -76 0 a 76 76 0 1 1 152 0 a 76 76 0 1 1 -152 0" fill="none"/>
+    <text font-family="Inter" font-weight="600" font-size="10.5" fill="currentColor"><textPath href="#arc" textLength="474" lengthAdjust="spacing">DOZE COSMÉTICOS • BELEZA &amp; CUIDADO •</textPath></text>
+    <text x="100" y="100" text-anchor="middle" dominant-baseline="central" font-family="Fraunces" font-weight="300" font-size="66" fill="currentColor">d<tspan font-style="italic" fill="var(--ac, #c97b6b)">z</tspan></text>
+    <path d="M70 140 C 85 132, 115 132, 130 140" fill="none" stroke="var(--ac, #c97b6b)" stroke-width="2"/>
+  </symbol>
+</svg>
+
+<header class="nav" id="nav">
+  <div class="wrap">
+    <a class="logo" href="#topo"><svg><use href="#selo"/></svg>Doze</a>
+    <nav class="links"><a href="#dia">Dia a dia</a><a href="#modulos">Módulos</a><a href="#bipe">Leitor</a><a href="#pagamentos">Pagamentos</a><a href="#evolucao">Evolução</a><a href="#duvidas">Dúvidas</a></nav>
+    <a class="btn sm" href="../prototipo/"><i data-i="play"></i>Abrir protótipo</a>
+  </div>
+</header>
+
+<main id="topo">
+<section class="hero">
+  <div class="ring"></div>
+  <div class="wrap">
+    <div class="rv">
+      <span class="eyebrow"><i data-i="sparkles"></i>Sistema de gestão</span>
+      <h1>A loja inteira <em>na palma</em> do caixa.</h1>
+      <p class="lead">Um sistema feito sob medida para a Doze Cosméticos: vendas com leitor de código de barras, estoque que se atualiza sozinho, nota fiscal, clientes e financeiro. Tudo num só lugar, acessível do computador do caixa ou do celular.</p>
+      <div class="cta"><a class="btn" href="../prototipo/"><i data-i="play"></i>Experimentar o protótipo</a><a class="btn sec" href="#dia">Entender como funciona<i data-i="arrow-down"></i></a></div>
+      <div class="stats"><div><b>7</b><span>áreas integradas</span></div><div><b>1 bipe</b><span>para vender um produto</span></div><div><b>3</b><span>perfis de acesso</span></div></div>
+    </div>
+    <svg class="selo-big rv" aria-hidden="true"><use href="#selo"/></svg>
+  </div>
+</section>
+
+<section class="dark" id="dia">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow"><i data-i="sun"></i>Um dia na loja</span>
+      <h2>Do primeiro bipe ao <em>fechamento do caixa</em>.</h2>
+      <p class="lead">Cada venda alimenta automaticamente o estoque, o financeiro e os relatórios. Ninguém precisa anotar nada duas vezes.</p>
+    </div>
+    <div class="fluxo">
+      <div class="passo rv"><span class="n">01</span><div class="ic"><i data-i="lock-open"></i></div><b>Abrir o caixa</b><p>A vendedora entra com o próprio usuário e informa o troco inicial.</p></div>
+      <div class="passo rv"><span class="n">02</span><div class="ic"><i data-i="scan-barcode"></i></div><b>Bipar os produtos</b><p>Cada bipe coloca o item na venda, com preço e foto da categoria.</p></div>
+      <div class="passo rv"><span class="n">03</span><div class="ic"><i data-i="credit-card"></i></div><b>Receber</b><p>Pix, cartão ou dinheiro. O sistema calcula o troco e aplica descontos.</p></div>
+      <div class="passo rv"><span class="n">04</span><div class="ic"><i data-i="receipt"></i></div><b>Nota fiscal</b><p>A NFC-e é emitida na hora, impressa ou enviada pelo WhatsApp.</p></div>
+      <div class="passo rv"><span class="n">05</span><div class="ic"><i data-i="chart-column"></i></div><b>Tudo atualizado</b><p>O estoque baixa, o caixa soma e o painel mostra o resultado do dia.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="modulos">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow"><i data-i="layout-grid"></i>O que o sistema faz</span>
+      <h2>Sete áreas, <em>uma só</em> informação.</h2>
+      <p class="lead">Cada área conversa com as outras. Uma venda no caixa já aparece no estoque, na ficha da cliente e no financeiro.</p>
+    </div>
+    <div class="mods">
+      <article class="mod destaque rv"><div class="ic"><i data-i="scan-barcode"></i></div><h3>Caixa (PDV)</h3><p>A tela mais usada do dia, pensada para ser rápida: funciona só com o teclado e o leitor, sem precisar do mouse.</p>
+        <ul><li><i data-i="check"></i>Bipe ou busca por nome</li><li><i data-i="check"></i>Desconto, troco e várias formas de pagamento</li><li><i data-i="check"></i>Atalhos F2, F4 e Esc</li><li><i data-i="check"></i>Cupom NFC-e com QR Code</li></ul></article>
+      <article class="mod rv"><div class="ic"><i data-i="layout-dashboard"></i></div><h3>Painel</h3><p>O resumo da loja ao abrir o sistema: vendas do dia, faturamento do mês, ticket médio, lucro e os alertas que precisam de atenção.</p></article>
+      <article class="mod rv"><div class="ic"><i data-i="package"></i></div><h3>Produtos</h3><p>Cadastro organizado por categoria, marca e variação (tom, cor, tamanho), com custo, preço, margem, validade e dados fiscais.</p></article>
+      <article class="mod rv"><div class="ic"><i data-i="boxes"></i></div><h3>Estoque</h3><p>Entrada de mercadoria e contagem da prateleira pelo leitor, alerta de estoque baixo e de validade próxima, e histórico de tudo que entrou e saiu.</p></article>
+      <article class="mod rv"><div class="ic"><i data-i="users"></i></div><h3>Clientes</h3><p>Histórico de compras, quem mais compra, aniversariantes do mês e contato direto pelo WhatsApp para fidelizar.</p></article>
+      <article class="mod rv"><div class="ic"><i data-i="wallet"></i></div><h3>Financeiro</h3><p>Fluxo de caixa, contas a pagar e a receber, e o fechamento do dia com a conferência do dinheiro da gaveta.</p></article>
+      <article class="mod rv"><div class="ic"><i data-i="shield-check"></i></div><h3>Usuários</h3><p>Cada pessoa tem o próprio acesso. A vendedora vende; só a dona vê custos, lucro e o financeiro.</p></article>
+    </div>
+  </div>
+</section>
+
+<section id="bipe" style="background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+  <div class="wrap">
+    <div class="bipe">
+      <div class="rv">
+        <span class="eyebrow"><i data-i="scan-barcode"></i>O leitor de código de barras</span>
+        <h2>Parece mágica, mas é <em>um teclado</em> muito rápido.</h2>
+        <p class="lead">Não precisa de instalação nem de programa especial. Qualquer leitor USB comum, de R$ 80 a R$ 200, funciona.</p>
+        <div class="steps">
+          <div class="step"><span class="num">1</span><div><b>O leitor “digita” o código</b><p>Ao bipar, ele escreve os 13 números da embalagem e aperta Enter, tudo em menos de um décimo de segundo.</p></div></div>
+          <div class="step"><span class="num">2</span><div><b>O sistema reconhece o bipe</b><p>Números chegando rápido demais para uma pessoa digitar significam: foi o leitor.</p></div></div>
+          <div class="step"><span class="num">3</span><div><b>Procura no cadastro</b><p>Achou: o produto entra na venda com um som de confirmação. Não achou: o sistema oferece cadastrar na hora.</p></div></div>
+          <div class="step"><span class="num">4</span><div><b>Baixa no estoque ao finalizar</b><p>Quando a venda é paga, a quantidade sai do estoque e fica registrado quem vendeu e quando.</p></div></div>
+        </div>
+      </div>
+      <div class="scanner rv" aria-hidden="true">
+        <div class="barcode" id="barcode"></div>
+        <div class="digits">7 891350 034567</div>
+        <div class="typing" id="typing"></div>
+        <div class="result" id="result"><span class="ok"><i data-i="circle-check"></i></span><div style="flex:1"><b>Batom Matte Vermelho Paixão</b><small>Ruby Rose · adicionado à venda</small></div><b>R$ 19,90</b></div>
+      </div>
+    </div>
+    <div class="usos">
+      <div class="uso rv"><span class="ic"><i data-i="shopping-bag"></i></span><div><b>Na venda</b><p>Cada bipe adiciona o produto. Bipou de novo, soma a quantidade.</p></div></div>
+      <div class="uso rv"><span class="ic"><i data-i="package-plus"></i></span><div><b>Na chegada de mercadoria</b><p>Bipe o que chegou do fornecedor e o estoque aumenta.</p></div></div>
+      <div class="uso rv"><span class="ic"><i data-i="clipboard-check"></i></span><div><b>Na contagem</b><p>Bipe a prateleira e veja as diferenças com o que o sistema diz.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow"><i data-i="landmark"></i>Nota fiscal e acessos</span>
+      <h2>Dentro da lei, e cada um <em>no seu lugar</em>.</h2>
+    </div>
+    <div class="duo">
+      <div class="box rv"><span class="chip"><i data-i="receipt"></i>NFC-e</span><h3>A nota fiscal sai sozinha</h3>
+        <p>O “cupom fiscal” de hoje é a NFC-e, a nota fiscal de consumidor eletrônica. O sistema monta a nota com os dados da venda e envia a um serviço especializado, que a registra na Secretaria da Fazenda (SEFAZ) de Santa Catarina em poucos segundos.</p>
+        <div class="nf-fluxo"><span><i data-i="shopping-bag"></i>Venda</span><i data-i="arrow-right" class="seta"></i><span><i data-i="send"></i>Emissor</span><i data-i="arrow-right" class="seta"></i><span><i data-i="landmark"></i>SEFAZ-SC</span><i data-i="arrow-right" class="seta"></i><span><i data-i="printer"></i>Cupom</span></div>
+        <p style="font-size:14px;color:var(--muted)">No protótipo a nota é apenas simulada, para mostrar como ela vai ficar.</p></div>
+      <div class="box rv"><span class="chip"><i data-i="shield-check"></i>Permissões</span><h3>Cada pessoa vê o que precisa</h3>
+        <div class="perfis">
+          <div class="perfil"><span class="av"><i data-i="crown"></i></span><div><b>Administradora</b><p>Acesso total, inclusive custos, lucro e cadastro de usuários.</p></div></div>
+          <div class="perfil"><span class="av" style="background:var(--terra)"><i data-i="briefcase"></i></span><div><b>Gerente</b><p>Cuida da loja, do estoque e do financeiro, mas não mexe nos usuários.</p></div></div>
+          <div class="perfil"><span class="av" style="background:#b9949d"><i data-i="shopping-bag"></i></span><div><b>Vendedora</b><p>Caixa, clientes e consulta de estoque. Não vê custos nem o financeiro.</p></div></div>
+        </div></div>
+    </div>
+  </div>
+</section>
+
+<section id="pagamentos" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow"><i data-i="credit-card"></i>Pagamentos</span>
+      <h2>Começa simples, <em>fica automático</em>.</h2>
+      <p class="lead">No início a loja continua com a maquininha atual, e o sistema registra como cada venda foi paga. Depois, os pagamentos passam a se confirmar sozinhos.</p>
+    </div>
+    <div class="pag">
+      <div class="box rv"><span class="tag">Início</span><i data-i="banknote"></i><h3>Registro completo</h3><p>Forma de pagamento, parcelas, pagamento dividido (parte no Pix, parte no cartão), taxas da maquininha e a data em que o dinheiro cai na conta.</p></div>
+      <div class="box rv"><span class="tag b">Próximo passo</span><i data-i="qr-code"></i><h3>Pix na tela</h3><p>O sistema mostra um QR Code com o valor exato. A cliente paga e a venda se confirma sozinha, sem conferir comprovante e sem risco de comprovante falso.</p></div>
+      <div class="box rv"><span class="tag c">Opcional</span><i data-i="smartphone-nfc"></i><h3>Maquininha integrada</h3><p>O valor vai direto do sistema para a maquininha. A cliente aproxima o cartão e a confirmação volta sozinha. Exige uma maquininha compatível.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="evolucao" style="background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow"><i data-i="route"></i>Como o sistema evolui</span>
+      <h2>Do protótipo ao <em>sistema completo</em>.</h2>
+      <p class="lead">O projeto cresce em etapas. Cada etapa já entrega algo que a loja usa de verdade, e a próxima só começa quando a anterior estiver funcionando bem.</p>
+    </div>
+    <div class="road">
+      <div class="fase agora rv"><span class="dot"><i data-i="eye"></i></span><div class="card"><span class="when">Agora · Protótipo</span><h3>Ver e experimentar</h3><p>Todas as telas funcionando com dados de exemplo, para decidir juntos o que fica, o que muda e o que falta. Nada é salvo de verdade: ao recarregar a página, tudo volta ao início.</p></div></div>
+      <div class="fase rv"><span class="dot"><i data-i="rocket"></i></span><div class="card"><span class="when">Etapa 1 · Sistema no ar</span><h3>A loja começa a usar</h3><p>O protótipo vira sistema real, com os dados guardados com segurança na nuvem.</p>
+        <ul><li><i data-i="check"></i>Login com e-mail e senha para cada pessoa</li><li><i data-i="check"></i>Banco de dados com cópia de segurança diária</li><li><i data-i="check"></i>Emissão real de NFC-e</li><li><i data-i="check"></i>Importação dos produtos por planilha</li><li><i data-i="check"></i>Caixa, estoque, clientes e financeiro</li><li><i data-i="check"></i>Treinamento da equipe</li></ul></div></div>
+      <div class="fase rv"><span class="dot"><i data-i="zap"></i></span><div class="card"><span class="when">Etapa 2 · Mais agilidade</span><h3>Menos trabalho manual</h3><p>Automações que economizam tempo no balcão e aproximam as clientes.</p>
+        <ul><li><i data-i="check"></i>Pix com QR Code e confirmação automática</li><li><i data-i="check"></i>Crediário e vale-troca</li><li><i data-i="check"></i>Mensagens de aniversário pelo WhatsApp</li><li><i data-i="check"></i>Impressão de etiquetas de preço</li><li><i data-i="check"></i>Lista de compras para o fornecedor</li><li><i data-i="check"></i>Entrada de mercadoria pela nota do fornecedor</li></ul></div></div>
+      <div class="fase rv"><span class="dot"><i data-i="sparkles"></i></span><div class="card"><span class="when">Etapa 3 · Crescimento</span><h3>Vender além do balcão</h3><p>Quando a loja estiver pronta para crescer, o mesmo sistema pode alimentar novos canais.</p>
+        <ul><li><i data-i="check"></i>Maquininha integrada ao caixa</li><li><i data-i="check"></i>Link de pagamento para vendas no Instagram</li><li><i data-i="check"></i>Catálogo online com o estoque real</li><li><i data-i="check"></i>Programa de pontos para clientes</li><li><i data-i="check"></i>Relatórios avançados (curva ABC, sazonalidade)</li><li><i data-i="check"></i>Mais de uma loja ou caixa</li></ul></div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow"><i data-i="list-checks"></i>O que a loja precisa ter</span>
+      <h2>Poucos itens, <em>a maioria você já tem</em>.</h2>
+    </div>
+    <div class="precisa">
+      <div class="item rv"><i data-i="monitor" class="ic"></i><b>Computador com internet</b><p>O do caixa já serve. O sistema abre pelo navegador, sem instalar nada.</p><small>Provavelmente já tem</small></div>
+      <div class="item rv"><i data-i="scan-barcode" class="ic"></i><b>Leitor de código de barras</b><p>Modelo USB simples. Liga no computador e já funciona.</p><small>Cerca de R$ 80 a R$ 200</small></div>
+      <div class="item rv"><i data-i="printer" class="ic"></i><b>Impressora térmica</b><p>Para imprimir o cupom. Também dá para enviar só pelo WhatsApp.</p><small>Cerca de R$ 300 a R$ 600</small></div>
+      <div class="item rv"><i data-i="file-key" class="ic"></i><b>Certificado digital A1</b><p>Arquivo que assina as notas fiscais. O contador ajuda a conseguir, junto com o CSC da SEFAZ.</p><small>Cerca de R$ 150 por ano</small></div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow"><i data-i="book-open"></i>Pequeno glossário</span>
+      <h2>As palavras que <em>vão aparecer</em>.</h2>
+    </div>
+    <dl class="gloss rv">
+      <div><dt>PDV</dt><dd>Ponto de venda. É o caixa, a tela onde a venda acontece.</dd></div>
+      <div><dt>Código de barras (EAN)</dt><dd>Os 13 números embaixo das barras na embalagem. Cada produto tem o seu, igual no Brasil todo.</dd></div>
+      <div><dt>NFC-e</dt><dd>Nota Fiscal de Consumidor Eletrônica. Substituiu o antigo cupom fiscal.</dd></div>
+      <div><dt>SEFAZ</dt><dd>Secretaria da Fazenda do estado. É quem autoriza cada nota fiscal.</dd></div>
+      <div><dt>Ticket médio</dt><dd>Quanto cada cliente gasta, em média, por compra. Subir o ticket médio é vender mais para quem já entrou na loja.</dd></div>
+      <div><dt>Margem</dt><dd>Quanto do preço de venda é lucro. Um batom que custa R$ 8,50 e é vendido por R$ 19,90 tem margem de 57%.</dd></div>
+      <div><dt>Estoque mínimo</dt><dd>A quantidade em que o sistema avisa que é hora de comprar mais.</dd></div>
+      <div><dt>Inventário</dt><dd>A contagem física do estoque, para conferir se a prateleira bate com o sistema.</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section id="duvidas" style="padding-top:0">
+  <div class="wrap" style="max-width:860px">
+    <div class="sec-head rv">
+      <span class="eyebrow"><i data-i="message-circle-question"></i>Dúvidas comuns</span>
+      <h2>Perguntas que <em>sempre aparecem</em>.</h2>
+    </div>
+    <div class="faq rv">
+      <details><summary>Se a internet cair, a loja para de vender?<i data-i="plus"></i></summary><p>O sistema real terá um modo de contingência: as vendas continuam sendo registradas e as notas são enviadas à SEFAZ assim que a conexão voltar, como a lei permite. Um roteador de celular de reserva também resolve a maior parte dos casos.</p></details>
+      <details><summary>Os dados ficam seguros?<i data-i="plus"></i></summary><p>Sim. Na etapa 1 os dados ficam num banco de dados profissional na nuvem, com cópia de segurança automática, conexão criptografada e acesso só com login. Se o computador do caixa quebrar, nada se perde.</p></details>
+      <details><summary>Dá para usar no celular?<i data-i="plus"></i></summary><p>Dá. O sistema é um site, então abre em qualquer aparelho. O caixa foi pensado para o computador, mas consultar estoque, ver o painel ou cadastrar uma cliente funciona bem no celular.</p></details>
+      <details><summary>Preciso cadastrar todos os produtos um por um?<i data-i="plus"></i></summary><p>Não. Os produtos podem ser importados de uma planilha ou do programa de nota fiscal que a loja usa hoje. Produtos novos podem ser cadastrados na hora em que forem bipados pela primeira vez.</p></details>
+      <details><summary>E se um produto não tiver código de barras?<i data-i="plus"></i></summary><p>Kits montados na loja ou itens fracionados recebem um código criado pelo próprio sistema, que pode ser impresso numa etiqueta e colado no produto.</p></details>
+      <details><summary>Vou poder pedir mudanças depois?<i data-i="plus"></i></summary><p>Sim, essa é a vantagem de um sistema sob medida. O protótipo existe justamente para ajustar telas e regras antes da versão real, e as etapas seguintes podem ser reordenadas conforme a necessidade da loja.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="dark final">
+  <div class="wrap rv">
+    <svg class="selo-sm" aria-hidden="true"><use href="#selo"/></svg>
+    <h2>Que tal ver <em>funcionando</em>?</h2>
+    <p class="lead">Entre como dona, gerente ou vendedora, bipe alguns produtos (ou clique para simular) e finalize uma venda para ver o cupom.</p>
+    <a class="btn" href="../prototipo/"><i data-i="play"></i>Abrir o protótipo</a>
+  </div>
+</section>
+</main>
+<footer>Doze Cosméticos · Protótipo do sistema de gestão · Dados fictícios</footer>
+
+<script>
+// Ícones
+const pascal = n => n.split('-').map(p => p[0].toUpperCase() + p.slice(1)).join('');
+document.querySelectorAll('[data-i]').forEach(el => {
+  let node = window.lucide && lucide.icons[pascal(el.dataset.i)];
+  if (!node) return el.remove();
+  if (node[0] === 'svg') node = node[2];
+  const svg = `<svg class="i ${el.getAttribute('class') || ''}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${node.map(([t, a]) => `<${t} ${Object.entries(a).map(([k, v]) => `${k}="${v}"`).join(' ')}/>`).join('')}</svg>`;
+  el.outerHTML = svg;
+});
+// Código de barras desenhado
+const bc = document.getElementById('barcode');
+let s = 7; for (let i = 0; i < 46; i++) { s = (s * 9301 + 49297) % 233280; const w = 1 + Math.floor(s / 233280 * 4); bc.insertAdjacentHTML('beforeend', `<i style="width:${w}px;${i % 3 === 2 ? 'opacity:0' : ''}"></i>`); }
+// Simulação do bipe digitando
+const tp = document.getElementById('typing'), rs = document.getElementById('result'), cod = '7891350034567';
+function ciclo() {
+  let k = 0; rs.classList.remove('on'); tp.innerHTML = '<span class="cur"></span>';
+  const t = setInterval(() => {
+    k++; tp.innerHTML = cod.slice(0, k) + '<span class="cur"></span>';
+    if (k === cod.length) { clearInterval(t); setTimeout(() => { tp.innerHTML = cod + ' <b style="color:var(--amora)">↵ Enter</b>'; rs.classList.add('on'); }, 150); setTimeout(ciclo, 3800); }
+  }, 45);
+}
+if (matchMedia('(prefers-reduced-motion: reduce)').matches) { tp.textContent = cod + ' ↵ Enter'; rs.classList.add('on'); } else ciclo();
+// Revelar ao rolar
+const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .12 });
+document.querySelectorAll('.rv').forEach((el, i) => { el.style.transitionDelay = (i % 5) * 60 + 'ms'; io.observe(el); });
+// Borda do menu ao rolar
+addEventListener('scroll', () => document.getElementById('nav').classList.toggle('scrolled', scrollY > 10), { passive: true });
+</script>
+</body>
+</html>

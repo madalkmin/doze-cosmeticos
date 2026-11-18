@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="selo.svg">
+<title>Doze Cosméticos · Gestão</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;1,9..144,300&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><svg class="selo" viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="92" fill="none" stroke="currentColor" stroke-width="5"/><circle cx="100" cy="100" r="62" fill="none" stroke="currentColor" stroke-width="2"/><path id="arcL" d="M 100 100 m -76 0 a 76 76 0 1 1 152 0 a 76 76 0 1 1 -152 0" fill="none"/><text font-family="Inter" font-weight="600" font-size="10.5" fill="currentColor"><textPath href="#arcL" textLength="474" lengthAdjust="spacing">DOZE COSMÉTICOS • BELEZA &amp; CUIDADO •</textPath></text><text x="100" y="100" text-anchor="middle" dominant-baseline="central" font-family="Fraunces" font-weight="300" font-size="66" fill="currentColor">d<tspan font-style="italic" fill="#e8a593">z</tspan></text><path d="M70 140 C 85 132, 115 132, 130 140" fill="none" stroke="#e8a593" stroke-width="3"/></svg><div><strong>Doze</strong><small>Cosméticos</small></div></div>
+    <nav id="menu"></nav>
+    <div class="perfil">
+      <label for="usuario">Usuário logado (demo)</label>
+      <select id="usuario"></select>
+      <small id="perfilNome"></small>
+    </div>
+  </aside>
+  <main id="tela"></main>
+</div>
+<div id="modal" class="modal hidden"><div class="modal-box" id="modalBox"></div></div>
+<div id="toast" class="toast"></div>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

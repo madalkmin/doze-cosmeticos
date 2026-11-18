@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Doze — Identidade Visual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700&family=Inter:wght@400;500;600&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Cormorant+Garamond:ital,wght@0,500;1,500&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: Inter, sans-serif; background: #f4f2ef; color: #1d1b19; padding: 40px 16px 80px; }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  header.top h1 { font-family: Fraunces, serif; font-weight: 500; font-size: 40px; }
+  header.top p { color: #6b655e; margin-top: 8px; max-width: 640px; line-height: 1.5; }
+  section.dir { margin-top: 56px; border-radius: 20px; overflow: hidden; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+  .dir-head { padding: 28px 32px 0; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: baseline; }
+  .dir-head h2 { font-size: 14px; letter-spacing: .12em; text-transform: uppercase; color: #6b655e; font-weight: 600; }
+  .dir-head h3 { font-family: Fraunces, serif; font-size: 28px; font-weight: 500; margin-top: 4px; }
+  .dir-head p { color: #554f49; max-width: 520px; line-height: 1.5; font-size: 15px; margin-top: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; padding: 24px 32px 32px; }
+  .card { border-radius: 14px; min-height: 220px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px; position: relative; overflow: hidden; }
+  .card .lbl { position: absolute; top: 12px; left: 14px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; opacity: .8; }
+  .hero { grid-column: 1 / -1; min-height: 300px; }
+  .swatches { display: flex; gap: 0; width: 100%; height: 120px; border-radius: 10px; overflow: hidden; }
+  .swatches div { flex: 1; display: flex; align-items: flex-end; padding: 8px; font-size: 11px; font-family: ui-monospace, monospace; }
+  .type-sample { text-align: left; width: 100%; }
+
+  /* ===== 1. Doze Botânica ===== */
+  .d1 { --a:#7d3150; --b:#f4dfe0; --c:#c97b6b; --d:#e8c4c4; --e:#fbf5f2; }
+  .d1 .logo { font-family: Fraunces, serif; font-weight: 300; font-size: 88px; letter-spacing: -.02em; color: var(--a); line-height: 1; }
+  .d1 .logo em { font-style: italic; color: var(--c); }
+  .d1 .sub { font-size: 11px; letter-spacing: .5em; text-transform: uppercase; color: var(--a); margin-top: 10px; padding-left: .5em; }
+  .d1 .mono { width: 120px; height: 120px; border-radius: 50%; border: 1.5px solid var(--b); display: grid; place-items: center; font-family: Fraunces, serif; font-size: 56px; font-style: italic; color: var(--b); }
+
+  /* ===== 2. Doze Pop ===== */
+  .d2 { --a:#ff3d7f; --b:#1a1a1a; --c:#ffd23f; --d:#ffe3ec; --e:#ffffff; }
+  .d2 .logo { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 96px; color: var(--b); letter-spacing: -.05em; line-height: .9; }
+  .d2 .logo span { color: var(--a); }
+  .d2 .sub { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: 13px; letter-spacing: .3em; text-transform: uppercase; color: var(--b); margin-top: 8px; }
+  .d2 .mono { width: 120px; height: 120px; border-radius: 32px; background: var(--a); display: grid; place-items: center; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 64px; color: #fff; transform: rotate(-6deg); }
+
+  /* ===== 3. Doze Atelier ===== */
+  .d3 { --a:#121212; --b:#c9a96e; --c:#f6e4e2; --d:#d8a1a8; --e:#faf8f5; }
+  .d3 .logo { font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 92px; letter-spacing: .28em; color: var(--c); line-height: 1; padding-left: .28em; }
+  .d3 .sub { font-family: 'DM Sans', sans-serif; font-size: 11px; letter-spacing: .6em; text-transform: uppercase; color: var(--b); margin-top: 14px; padding-left: .6em; }
+  .d3 .line { width: 48px; height: 1px; background: var(--b); margin: 18px auto 0; }
+  .d3 .mono { width: 120px; height: 120px; border: 1px solid var(--b); display: grid; place-items: center; font-family: 'Cormorant Garamond', serif; font-size: 52px; color: var(--b); }
+  .d3 .mono::after { content: ''; }
+
+  /* aplicações */
+  .bag { width: 140px; height: 170px; border-radius: 4px 4px 10px 10px; position: relative; display: grid; place-items: center; box-shadow: 0 10px 24px rgba(0,0,0,.12); }
+  .bag::before { content: ''; position: absolute; top: -26px; left: 38px; width: 60px; height: 40px; border: 4px solid currentColor; border-bottom: none; border-radius: 30px 30px 0 0; opacity: .7; }
+  .tag { width: 200px; border-radius: 10px; padding: 14px 16px; text-align: left; box-shadow: 0 6px 18px rgba(0,0,0,.08); }
+  .tag .n { font-size: 13px; font-weight: 500; }
+  .tag .p { font-size: 26px; font-weight: 700; margin-top: 6px; }
+  .tag .bar { height: 26px; margin-top: 10px; background: repeating-linear-gradient(90deg, currentColor 0 2px, transparent 2px 4px, currentColor 4px 5px, transparent 5px 8px); opacity: .8; }
+  .ig { width: 200px; height: 200px; border-radius: 10px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; text-align: left; }
+  .pdv { width: 100%; border-radius: 10px; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,.08); font-size: 12px; }
+  .pdv .bar1 { padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
+  .pdv .body { padding: 14px; display: grid; gap: 6px; }
+  .pdv .row { display: flex; justify-content: space-between; padding: 6px 8px; border-radius: 6px; }
+  .pdv .btn { margin-top: 6px; padding: 10px; border-radius: 8px; text-align: center; font-weight: 600; }
+  footer { margin-top: 48px; color: #6b655e; font-size: 14px; line-height: 1.6; }
+  @media print { @page { size: A4; margin: 10mm; } * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } body { padding: 0; } section.dir { break-before: page; break-inside: avoid; box-shadow: none; margin-top: 0; } .grid { grid-template-columns: repeat(3, 1fr); } .card { min-height: 180px; } .hero { min-height: 200px; } footer { break-before: avoid; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Doze Cosméticos — novas identidades</h1>
+    <p>Três direções para repaginar a marca mantendo o nome. Cada uma mostra logotipo, símbolo, paleta, tipografia e como ficaria em sacola, etiqueta de preço com código de barras, post do Instagram e na tela do caixa do sistema.</p>
+  </header>
+
+  <!-- ================= 1 ================= -->
+  <section class="dir d1">
+    <div class="dir-head">
+      <div>
+        <h2>Direção 01</h2>
+        <h3>Botânica Rosé — natural e acolhedora</h3>
+        <p>Rosa-amora, blush e terracota. Serifa suave com itálico. Passa cuidado, skincare, autocuidado. Público amplo, 25–50 anos.</p>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="card hero" style="background:var(--e)">
+        <span class="lbl">Logotipo</span>
+        <div class="logo">do<em>z</em>e</div>
+        <div class="sub">cosméticos</div>
+      </div>
+      <div class="card" style="background:var(--a)"><span class="lbl" style="color:#fff">Símbolo</span><div class="mono">d</div></div>
+      <div class="card" style="background:#fff;border:1px solid #eee"><span class="lbl">Paleta</span>
+        <div class="swatches">
+          <div style="background:#7d3150;color:#fff">#7D3150</div><div style="background:#c97b6b;color:#fff">#C97B6B</div><div style="background:#e8c4c4">#E8C4C4</div><div style="background:#f4dfe0">#F4DFE0</div>
+        </div></div>
+      <div class="card" style="background:var(--b)"><span class="lbl">Tipografia</span>
+        <div class="type-sample" style="color:var(--a)"><div style="font-family:Fraunces;font-size:34px;font-weight:300">Fraunces <i style="color:var(--c)">Light</i></div><div style="font-family:Inter;margin-top:8px;font-size:14px">Inter — textos e sistema</div></div></div>
+      <div class="card" style="background:var(--d)"><span class="lbl">Sacola</span>
+        <div class="bag" style="background:var(--a);color:var(--a)"><div style="font-family:Fraunces;font-weight:300;font-size:34px;color:var(--b)">do<i style="color:var(--c)">z</i>e</div></div></div>
+      <div class="card" style="background:var(--e)"><span class="lbl">Etiqueta</span>
+        <div class="tag" style="background:#fff;color:var(--a)"><div class="n">Sérum Vitamina C · Payot</div><div class="p" style="font-family:Fraunces;font-weight:500">R$ 89,90</div><div class="bar"></div></div></div>
+      <div class="card" style="background:var(--b)"><span class="lbl">Instagram</span>
+        <div class="ig" style="background:var(--a);color:var(--b)"><div style="font-size:11px;letter-spacing:.3em">NOVIDADE</div><div style="font-family:Fraunces;font-size:30px;font-weight:300;line-height:1.05">Rotina de <i style="color:var(--c)">pele</i> que abraça</div><div style="font-size:12px">@dozecosmeticos</div></div></div>
+      <div class="card" style="background:var(--e)"><span class="lbl">Sistema (caixa)</span>
+        <div class="pdv"><div class="bar1" style="background:var(--a);color:var(--b)"><b style="font-family:Fraunces;font-weight:500;font-size:16px">do<i style="color:var(--c)">z</i>e</b><span>Caixa 01</span></div>
+        <div class="body" style="background:#fff"><div class="row" style="background:var(--e)"><span>Batom Matte Nude</span><b>19,90</b></div><div class="row" style="background:var(--e)"><span>Sérum Vit. C</span><b>89,90</b></div><div class="btn" style="background:var(--c);color:#fff">Finalizar · R$ 109,80</div></div></div></div>
+    </div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section class="dir d2">
+    <div class="dir-head">
+      <div>
+        <h2>Direção 02</h2>
+        <h3>Pop — vibrante e jovem</h3>
+        <p>Rosa-choque, preto e amarelo. Tipografia geométrica pesada. Chama atenção no feed e na vitrine. Ideal para maquiagem e público 16–35.</p>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="card hero" style="background:var(--d)">
+        <span class="lbl">Logotipo</span>
+        <div class="logo">doze<span>.</span></div>
+        <div class="sub">cosméticos</div>
+      </div>
+      <div class="card" style="background:var(--c)"><span class="lbl">Símbolo</span><div class="mono">12</div></div>
+      <div class="card" style="background:#fff;border:1px solid #eee"><span class="lbl">Paleta</span>
+        <div class="swatches">
+          <div style="background:#ff3d7f;color:#fff">#FF3D7F</div><div style="background:#1a1a1a;color:#fff">#1A1A1A</div><div style="background:#ffd23f">#FFD23F</div><div style="background:#ffe3ec">#FFE3EC</div>
+        </div></div>
+      <div class="card" style="background:var(--b)"><span class="lbl" style="color:#fff">Tipografia</span>
+        <div class="type-sample" style="color:#fff"><div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:38px">Bricolage <span style="color:var(--a)">Bold</span></div><div style="font-family:Inter;margin-top:8px;font-size:14px">Inter — textos e sistema</div></div></div>
+      <div class="card" style="background:var(--c)"><span class="lbl">Sacola</span>
+        <div class="bag" style="background:var(--a);color:var(--b)"><div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:36px;color:#fff">doze<span style="color:var(--c)">.</span></div></div></div>
+      <div class="card" style="background:var(--d)"><span class="lbl">Etiqueta</span>
+        <div class="tag" style="background:#fff;color:var(--b);border:2px solid var(--b)"><div class="n">Batom Matte · Ruby Rose</div><div class="p" style="font-family:'Bricolage Grotesque';color:var(--a)">R$ 19,90</div><div class="bar"></div></div></div>
+      <div class="card" style="background:var(--b)"><span class="lbl" style="color:#fff">Instagram</span>
+        <div class="ig" style="background:var(--a);color:#fff"><div style="background:var(--c);color:var(--b);font-family:'Bricolage Grotesque';font-weight:800;font-size:12px;padding:4px 8px;border-radius:20px;align-self:flex-start">-20% OFF</div><div style="font-family:'Bricolage Grotesque';font-weight:800;font-size:34px;line-height:.95">BATOM<br>DAY!</div><div style="font-size:12px">@dozecosmeticos</div></div></div>
+      <div class="card" style="background:var(--d)"><span class="lbl">Sistema (caixa)</span>
+        <div class="pdv"><div class="bar1" style="background:var(--b);color:#fff"><b style="font-family:'Bricolage Grotesque';font-weight:800;font-size:16px">doze<span style="color:var(--a)">.</span></b><span>Caixa 01</span></div>
+        <div class="body" style="background:#fff"><div class="row" style="background:var(--d)"><span>Batom Matte Nude</span><b>19,90</b></div><div class="row" style="background:var(--d)"><span>Sérum Vit. C</span><b>89,90</b></div><div class="btn" style="background:var(--a);color:#fff">Finalizar · R$ 109,80</div></div></div></div>
+    </div>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section class="dir d3">
+    <div class="dir-head">
+      <div>
+        <h2>Direção 03</h2>
+        <h3>Atelier Rosé — sofisticada e premium</h3>
+        <p>Preto, dourado e rosé. Serifa clássica com letras espaçadas. Posiciona a loja como boutique: perfumaria, marcas importadas, presentes.</p>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="card hero" style="background:var(--a)">
+        <span class="lbl" style="color:#fff">Logotipo</span>
+        <div class="logo">DOZE</div>
+        <div class="line"></div>
+        <div class="sub">cosméticos</div>
+      </div>
+      <div class="card" style="background:var(--c)"><span class="lbl">Símbolo</span><div class="mono" style="color:var(--a);border-color:var(--a)">XII</div></div>
+      <div class="card" style="background:#fff;border:1px solid #eee"><span class="lbl">Paleta</span>
+        <div class="swatches">
+          <div style="background:#121212;color:#fff">#121212</div><div style="background:#c9a96e">#C9A96E</div><div style="background:#d8a1a8">#D8A1A8</div><div style="background:#f6e4e2">#F6E4E2</div>
+        </div></div>
+      <div class="card" style="background:var(--e)"><span class="lbl">Tipografia</span>
+        <div class="type-sample"><div style="font-family:'Cormorant Garamond';font-size:38px">Cormorant <i style="color:var(--d)">Garamond</i></div><div style="font-family:'DM Sans';margin-top:8px;font-size:14px">DM Sans — textos e sistema</div></div></div>
+      <div class="card" style="background:var(--c)"><span class="lbl">Sacola</span>
+        <div class="bag" style="background:var(--a);color:var(--b)"><div style="text-align:center"><div style="font-family:'Cormorant Garamond';font-size:30px;letter-spacing:.25em;color:var(--c);padding-left:.25em">DOZE</div><div style="width:28px;height:1px;background:var(--b);margin:8px auto 0"></div></div></div></div>
+      <div class="card" style="background:var(--a)"><span class="lbl" style="color:#fff">Etiqueta</span>
+        <div class="tag" style="background:var(--e);color:var(--a)"><div class="n" style="font-family:'DM Sans'">Perfume Malbec · 100ml</div><div class="p" style="font-family:'Cormorant Garamond';font-weight:500">R$ 219,90</div><div class="bar"></div></div></div>
+      <div class="card" style="background:var(--c)"><span class="lbl">Instagram</span>
+        <div class="ig" style="background:var(--d);color:var(--a)"><div style="font-size:10px;letter-spacing:.4em;color:var(--b)">COLEÇÃO</div><div style="font-family:'Cormorant Garamond';font-size:32px;line-height:1.05">Presentes que<br><i>ficam na memória</i></div><div style="font-size:11px;letter-spacing:.2em">@DOZECOSMETICOS</div></div></div>
+      <div class="card" style="background:var(--e)"><span class="lbl">Sistema (caixa)</span>
+        <div class="pdv"><div class="bar1" style="background:var(--a);color:var(--c)"><b style="font-family:'Cormorant Garamond';font-weight:500;font-size:16px;letter-spacing:.25em">DOZE</b><span style="color:var(--b)">Caixa 01</span></div>
+        <div class="body" style="background:#fff"><div class="row" style="background:var(--e)"><span>Batom Matte Nude</span><b>19,90</b></div><div class="row" style="background:var(--e)"><span>Sérum Vit. C</span><b>89,90</b></div><div class="btn" style="background:var(--b);color:var(--a)">Finalizar · R$ 109,80</div></div></div></div>
+    </div>
+  </section>
+
+  <footer>Próximo passo: escolher uma direção (ou misturar — ex.: paleta da 01 com o logo da 03). A escolhida vira o tema do sistema de vendas e ganha versões finais do logo em SVG.</footer>
+</div>
+</body>
+</html>

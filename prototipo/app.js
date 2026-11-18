@@ -379,8 +379,8 @@ function desenharProdutos() {
   const b = filtroP.busca.toLowerCase();
   const lista = S.produtos.filter(p => (!filtroP.cat || p.categoria === filtroP.cat) && (!filtroP.marca || p.marca === filtroP.marca) && (p.nome + p.ean + p.marca).toLowerCase().includes(b));
   const vc = perfil().verCusto;
-  $('#tblProd').innerHTML = lista.length ? `<table><thead><tr><th>Produto</th><th>Categoria</th><th>Código</th>${vc ? '<th class="num">Custo</th>' : ''}<th class="num">Preço</th>${vc ? '<th class="num">Margem</th>' : ''}<th class="num">Estoque</th><th>Situação</th><th></th></tr></thead><tbody>
-  ${lista.map(p => `<tr><td><div class="prod">${thumb(p.categoria)}<span><b>${esc(p.nome)}</b><small>${p.marca}${p.variacao ? ' · ' + p.variacao : ''}</small></span></div></td><td>${p.categoria}</td><td class="code">${p.ean}</td>
+  $('#tblProd').innerHTML = lista.length ? `<table><thead><tr><th>Produto</th><th>Categoria</th>${vc ? '<th class="num">Custo</th>' : ''}<th class="num">Preço</th>${vc ? '<th class="num">Margem</th>' : ''}<th class="num">Estoque</th><th>Situação</th><th></th></tr></thead><tbody>
+  ${lista.map(p => `<tr><td><div class="prod">${thumb(p.categoria)}<span><b>${esc(p.nome)}</b><small>${p.marca}${p.variacao ? ' · ' + p.variacao : ''} · <span class="code">${p.ean}</span></small></span></div></td><td>${p.categoria}</td>
     ${vc ? `<td class="num muted">${brl(p.custo)}</td>` : ''}<td class="num"><b>${brl(p.preco)}</b></td>${vc ? `<td class="num">${((1 - p.custo / p.preco) * 100).toFixed(0)}%</td>` : ''}
     <td class="num">${p.estoque}</td><td>${statusEstoque(p)}</td><td><div class="row-actions"><button class="icon-btn" title="Editar" onclick="formProduto(${p.id})">${ic('pencil', 'sm')}</button></div></td></tr>`).join('')}
   </tbody></table>` : `<div class="empty"><div class="ring">${ic('search-x', 'xl')}</div><b>Nada encontrado</b>Tente outro nome ou limpe os filtros.</div>`;
@@ -584,3 +584,73 @@ TELAS.usuarios = () => {
 };
 
 render();
+
+// ===== Select personalizado universal =====
+// Substitui visualmente todo <select> do sistema. O select original continua
+// escondido por baixo (formulários e eventos "change" seguem funcionando).
+let ddAberto = null;
+function melhorarSelect(sel) {
+  if (sel.dataset.dz) return;
+  sel.dataset.dz = '1';
+  const wrap = document.createElement('div');
+  wrap.className = 'dz-select';
+  sel.parentNode.insertBefore(wrap, sel);
+  wrap.appendChild(sel);
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'dz-trigger';
+  btn.setAttribute('aria-haspopup', 'listbox');
+  wrap.appendChild(btn);
+  const atualizar = () => { const o = sel.options[sel.selectedIndex]; btn.innerHTML = `<span class="${sel.value === '' ? 'ph' : ''}">${esc(o ? o.text : '')}</span>${ic('chevron-down', 'sm')}`; };
+  atualizar();
+  sel.addEventListener('change', atualizar);
+  btn.addEventListener('click', e => { e.stopPropagation(); ddAberto && ddAberto.sel === sel ? fecharDropdown() : abrirDropdown(sel, btn, atualizar); });
+  btn.addEventListener('keydown', e => { if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) { e.preventDefault(); abrirDropdown(sel, btn, atualizar); } });
+}
+function abrirDropdown(sel, btn, atualizar) {
+  fecharDropdown();
+  const opts = [...sel.options];
+  const busca = opts.length > 8;
+  const dd = document.createElement('div');
+  dd.className = 'dz-dropdown'; dd.setAttribute('role', 'listbox');
+  dd.innerHTML = `${busca ? `<div class="dz-search">${ic('search', 'sm')}<input placeholder="Filtrar..." autocomplete="off"></div>` : ''}<div class="dz-list"></div>`;
+  document.body.appendChild(dd);
+  const lista = dd.querySelector('.dz-list');
+  let ativo = Math.max(0, sel.selectedIndex), visiveis = opts;
+  const desenhar = () => {
+    lista.innerHTML = visiveis.map((o, k) => `<div class="dz-opt ${o.value === sel.value ? 'sel' : ''} ${k === ativo ? 'ativo' : ''}" data-k="${k}" role="option">${esc(o.text)}${o.value === sel.value ? ic('check', 'sm') : ''}</div>`).join('') || '<div class="dz-vazio">Nada encontrado</div>';
+    const a = lista.querySelector('.ativo'); if (a) a.scrollIntoView({ block: 'nearest' });
+  };
+  const escolher = o => { if (!o) return; sel.value = o.value; sel.dispatchEvent(new Event('change', { bubbles: true })); atualizar(); fecharDropdown(); btn.focus(); };
+  visiveis = opts; ativo = Math.max(0, opts.indexOf(sel.options[sel.selectedIndex])); desenhar();
+  lista.addEventListener('mousedown', e => { const el = e.target.closest('.dz-opt'); if (el) { e.preventDefault(); escolher(visiveis[+el.dataset.k]); } });
+  lista.addEventListener('mousemove', e => { const el = e.target.closest('.dz-opt'); if (el && +el.dataset.k !== ativo) { ativo = +el.dataset.k; lista.querySelectorAll('.dz-opt').forEach(x => x.classList.toggle('ativo', +x.dataset.k === ativo)); } });
+  const teclas = e => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); ativo = Math.min(visiveis.length - 1, ativo + 1); desenhar(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); ativo = Math.max(0, ativo - 1); desenhar(); }
+    else if (e.key === 'Enter') { e.preventDefault(); escolher(visiveis[ativo]); }
+    else if (e.key === 'Escape' || e.key === 'Tab') { e.preventDefault(); e.stopPropagation(); fecharDropdown(); btn.focus(); }
+  };
+  const inp = dd.querySelector('input');
+  if (inp) {
+    inp.addEventListener('input', () => { const t = inp.value.toLowerCase(); visiveis = opts.filter(o => o.text.toLowerCase().includes(t)); ativo = 0; desenhar(); });
+    inp.addEventListener('keydown', teclas);
+  } else { dd.tabIndex = -1; dd.addEventListener('keydown', teclas); }
+  // posição: abaixo do botão, ou acima se não couber
+  const r = btn.getBoundingClientRect();
+  dd.style.minWidth = r.width + 'px'; dd.style.left = r.left + 'px';
+  const alt = Math.min(320, dd.offsetHeight);
+  if (r.bottom + alt + 8 > innerHeight && r.top > alt) dd.style.top = (r.top - alt - 6) + 'px'; else dd.style.top = (r.bottom + 6) + 'px';
+  if (r.left + dd.offsetWidth > innerWidth - 8) dd.style.left = Math.max(8, innerWidth - dd.offsetWidth - 8) + 'px';
+  btn.closest('.dz-select').classList.add('open');
+  ddAberto = { sel, dd, btn };
+  (inp || dd).focus();
+}
+function fecharDropdown() {
+  if (!ddAberto) return;
+  ddAberto.dd.remove(); ddAberto.btn.closest('.dz-select').classList.remove('open'); ddAberto = null;
+}
+document.addEventListener('mousedown', e => { if (ddAberto && !ddAberto.dd.contains(e.target) && !ddAberto.btn.contains(e.target)) fecharDropdown(); });
+window.addEventListener('resize', fecharDropdown);
+document.addEventListener('scroll', e => { if (ddAberto && !ddAberto.dd.contains(e.target)) fecharDropdown(); }, true);
+new MutationObserver(() => document.querySelectorAll('select:not([data-dz])').forEach(melhorarSelect)).observe(document.body, { childList: true, subtree: true });
+document.querySelectorAll('select').forEach(melhorarSelect);

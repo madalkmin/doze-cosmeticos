@@ -262,3 +262,39 @@ a.list-item:hover .tx b{color:var(--amora)}
   .login .form{padding:32px 16px}
 }
 @media print{.sidebar,.topbar,main,.toasts{display:none!important}.modal{position:static;background:none;backdrop-filter:none}.modal-box{box-shadow:none}.modal-box>*:not(.cupom){display:none}}
+
+/* ===== Select personalizado ===== */
+.dz-select{position:relative;width:100%}
+.toolbar .dz-select{width:auto;min-width:190px}
+.dz-select>select{position:absolute;inset:0;opacity:0;pointer-events:none;width:100%;height:100%}
+.dz-trigger{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-sm);background:#fff;text-align:left;transition:border .15s,box-shadow .15s;min-height:40px}
+.dz-trigger span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dz-trigger span.ph{color:var(--ink-2)}
+.dz-trigger svg{color:var(--muted);transition:transform .2s}
+.dz-trigger:hover{border-color:var(--rosa)}
+.dz-trigger:focus-visible,.dz-select.open .dz-trigger{outline:0;border-color:var(--amora);box-shadow:0 0 0 3px rgba(125,49,80,.12)}
+.dz-select.open .dz-trigger svg{transform:rotate(180deg);color:var(--amora)}
+.dz-dropdown{position:fixed;z-index:80;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 40px -12px rgba(58,38,48,.28);padding:6px;max-width:360px;animation:ddIn .14s ease-out;outline:0}
+@keyframes ddIn{from{opacity:0;transform:translateY(-4px)}}
+.dz-search{position:relative;margin-bottom:6px}
+.dz-search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.dz-search input{padding:8px 10px 8px 32px;font-size:13px;background:var(--creme);border-color:transparent}
+.dz-list{max-height:260px;overflow-y:auto;overscroll-behavior:contain;padding-right:2px}
+.dz-opt{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 10px;border-radius:8px;cursor:pointer;font-size:13.5px;white-space:nowrap}
+.dz-opt.ativo{background:var(--line-2)}
+.dz-opt.sel{color:var(--amora);font-weight:600}
+.dz-opt.sel.ativo{background:var(--blush)}
+.dz-opt svg{color:var(--amora)}
+.dz-vazio{padding:14px 10px;color:var(--muted);font-size:13px;text-align:center}
+
+/* ===== Barras de rolagem ===== */
+*{scrollbar-width:thin;scrollbar-color:#d9b9bf transparent}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#dcc0c5;border-radius:99px;border:3px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:#b98593;background-clip:padding-box;border:2px solid transparent}
+::-webkit-scrollbar-corner{background:transparent}
+html{scrollbar-color:#cfa9b1 var(--bg)}
+html::-webkit-scrollbar-track{background:var(--bg)}
+.sidebar *{scrollbar-color:rgba(255,255,255,.25) transparent}
+.sidebar ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.22);background-clip:padding-box}

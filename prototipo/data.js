@@ -43,12 +43,12 @@ const PRODUTOS = PRODUTOS_SEED.map((p, i) => ({
 }));
 
 const CLIENTES = [
-  { id: 1, nome: 'Ana Paula Souza', cpf: '123.456.789-00', fone: '(47) 99912-3456', nasc: '1990-11-21', compras: [] },
-  { id: 2, nome: 'Juliana Martins', cpf: '987.654.321-00', fone: '(47) 99876-5432', nasc: '1985-11-19', compras: [] },
-  { id: 3, nome: 'Fernanda Lima', cpf: '456.789.123-00', fone: '(47) 98811-2233', nasc: '1998-03-02', compras: [] },
-  { id: 4, nome: 'Camila Rocha', cpf: '321.654.987-00', fone: '(47) 99654-7788', nasc: '1993-07-15', compras: [] },
-  { id: 5, nome: 'Patrícia Alves', cpf: '159.753.486-00', fone: '(47) 99123-9988', nasc: '1979-12-05', compras: [] },
-  { id: 6, nome: 'Beatriz Costa', cpf: '753.159.852-00', fone: '(47) 98456-1122', nasc: '2001-11-25', compras: [] },
+  { id: 1, nome: 'Ana Paula Souza', cpf: '123.456.789-00', fone: '(19) 99912-3456', nasc: '1990-11-21', compras: [] },
+  { id: 2, nome: 'Juliana Martins', cpf: '987.654.321-00', fone: '(19) 99876-5432', nasc: '1985-11-19', compras: [] },
+  { id: 3, nome: 'Fernanda Lima', cpf: '456.789.123-00', fone: '(19) 98811-2233', nasc: '1998-03-02', compras: [] },
+  { id: 4, nome: 'Camila Rocha', cpf: '321.654.987-00', fone: '(19) 99654-7788', nasc: '1993-07-15', compras: [] },
+  { id: 5, nome: 'Patrícia Alves', cpf: '159.753.486-00', fone: '(19) 99123-9988', nasc: '1979-12-05', compras: [] },
+  { id: 6, nome: 'Beatriz Costa', cpf: '753.159.852-00', fone: '(19) 98456-1122', nasc: '2001-11-25', compras: [] },
 ];
 
 const USUARIOS = [

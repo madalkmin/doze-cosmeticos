@@ -285,7 +285,7 @@ function mostrarCupom(v, troco) {
   const cli = S.clientes.find(c => c.id === v.cliente);
   abrirModal(`<div class="modal-head"><span class="ico-chip ok">${ic('circle-check', 'lg')}</span><div><h2>Venda concluída</h2><p>${brl(v.total)} em ${v.pagamento}${troco ? ` · troco de <b>${brl(troco)}</b>` : ''}. Estoque atualizado.</p></div></div>
   <div class="cupom">
-    <div class="c"><b>DOZE COSMÉTICOS LTDA</b><br>CNPJ 00.000.000/0001-00<br>Itapema · SC</div><hr>
+    <div class="c"><b>DOZE COSMÉTICOS LTDA</b><br>CNPJ 00.000.000/0001-00<br>Limeira · SP</div><hr>
     <div class="c">DANFE NFC-e · Documento Auxiliar da<br>Nota Fiscal de Consumidor Eletrônica</div><hr>
     ${v.itens.map(i => `<div>${esc(i.nome.slice(0, 30))}</div><div class="row"><span>${i.qtd} x ${brl(i.preco)}</span><span>${brl(i.qtd * i.preco)}</span></div>`).join('')}<hr>
     <div class="row"><span>Qtd. itens</span><span>${v.itens.reduce((s, i) => s + i.qtd, 0)}</span></div>
@@ -295,9 +295,9 @@ function mostrarCupom(v, troco) {
     ${troco ? `<div class="row"><span>Troco</span><span>${brl(troco)}</span></div>` : ''}<hr>
     <div class="c">${cli ? `CONSUMIDOR: ${esc(cli.nome).toUpperCase()}<br>CPF ${cli.cpf}` : 'CONSUMIDOR NÃO IDENTIFICADO'}<br>
     NFC-e nº ${v.nfce} · Série 001<br>${new Date(v.data).toLocaleString('pt-BR')}
-    <div class="qr">${qrFake(+v.nfce)}</div>Consulte pela chave de acesso em<br>sat.sef.sc.gov.br/nfce/consulta</div>
+    <div class="qr">${qrFake(+v.nfce)}</div>Consulte pela chave de acesso em<br>nfce.fazenda.sp.gov.br/consulta</div>
   </div>
-  <p class="muted" style="text-align:center;font-size:12px;margin:14px 0 0">${ic('info', 'sm')} Nota simulada. No sistema real ela é autorizada pela SEFAZ-SC.</p>
+  <p class="muted" style="text-align:center;font-size:12px;margin:14px 0 0">${ic('info', 'sm')} Nota simulada. No sistema real ela é autorizada pela SEFAZ-SP.</p>
   <div class="acoes"><button class="btn sec" onclick="toast('Comprovante enviado por WhatsApp (simulação)')">${ic('message-circle', 'sm')}WhatsApp</button><button class="btn sec" onclick="window.print()">${ic('printer', 'sm')}Imprimir</button><button class="btn" onclick="fecharModal()">${ic('plus', 'sm')}Nova venda</button></div>`);
 }
 
@@ -515,7 +515,7 @@ function verCliente(id) {
 }
 function formCliente() {
   abrirModal(`<div class="modal-head"><span class="ico-chip">${ic('user-plus', 'lg')}</span><div><h2>Nova cliente</h2><p>Dados para nota fiscal e relacionamento</p></div></div>
-  <form id="fc" class="form-grid" onsubmit="return false"><label class="field full">Nome completo<input name="nome" required></label><label class="field">CPF<input name="cpf" placeholder="000.000.000-00"></label><label class="field">WhatsApp<input name="fone" placeholder="(47) 90000-0000"></label><label class="field">Data de nascimento<input name="nasc" type="date"></label></form>
+  <form id="fc" class="form-grid" onsubmit="return false"><label class="field full">Nome completo<input name="nome" required></label><label class="field">CPF<input name="cpf" placeholder="000.000.000-00"></label><label class="field">WhatsApp<input name="fone" placeholder="(19) 90000-0000"></label><label class="field">Data de nascimento<input name="nasc" type="date"></label></form>
   <div class="acoes"><button class="btn sec" onclick="fecharModal()">Cancelar</button><button class="btn" onclick="salvarCliente()">${ic('check', 'sm')}Salvar</button></div>`);
   setTimeout(() => $('#fc [name=nome]').focus(), 60);
 }

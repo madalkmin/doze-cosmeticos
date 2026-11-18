@@ -17,7 +17,8 @@ Sistema web interno da loja (uso da equipe, não é loja virtual).
 - Fluxos com bipe: venda (baixa no estoque), entrada de mercadoria (soma), inventário/contagem (confere).
 
 ## Decisões (2026-11-18)
-- **Nota fiscal: sim.** A loja emite NFC-e → integrar via API de emissor (Focus NFe, PlugNotas ou NFE.io), não construir do zero. Exige certificado digital A1 + CSC da SEFAZ-SC. Produto precisa de NCM, CFOP, CEST e tributação no cadastro.
+- **Local da loja: Limeira - SP** (não é Itapema-SC; o Instagram aberto no início mostrava outro nome). Nota fiscal segue as regras da SEFAZ-SP; em SP o SAT está sendo substituído pela NFC-e — confirmar com o contador qual a loja usa hoje.
+- **Nota fiscal: sim.** A loja emite NFC-e → integrar via API de emissor (Focus NFe, PlugNotas ou NFE.io), não construir do zero. Exige certificado digital A1 + CSC da SEFAZ-SP. Produto precisa de NCM, CFOP, CEST e tributação no cadastro.
 - **Uso:** site acessível de qualquer lugar; foco é o computador do caixa (tela otimizada pra teclado + leitor).
 - **Catálogo grande:** cadastro robusto com categorias/subcategorias, marcas, variações (cor/tom/tamanho), preço de custo/venda, margem, fotos, busca rápida, importação por planilha.
 - **Cartão:** maquininha separada; sistema só registra forma de pagamento (e parcelas/taxa pro financeiro).

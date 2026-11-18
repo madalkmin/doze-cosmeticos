@@ -48,7 +48,7 @@ nav a.ativo .badge{background:var(--amora)}
 .topbar .chip{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-2);background:#fff;border:1px solid var(--line);padding:7px 12px;border-radius:99px}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(63,125,90,.5);animation:pulse 2s infinite}
 @keyframes pulse{70%{box-shadow:0 0 0 7px rgba(63,125,90,0)}100%{box-shadow:0 0 0 0 rgba(63,125,90,0)}}
-main{padding:28px 32px 48px;max-width:1400px;width:100%}
+main{padding:28px 32px 48px;width:100%}
 
 /* ===== Tipografia / cabeçalho ===== */
 .head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:24px}

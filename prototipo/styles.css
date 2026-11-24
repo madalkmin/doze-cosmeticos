@@ -298,3 +298,53 @@ html{scrollbar-color:#cfa9b1 var(--bg)}
 html::-webkit-scrollbar-track{background:var(--bg)}
 .sidebar *{scrollbar-color:rgba(255,255,255,.25) transparent}
 .sidebar ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.22);background-clip:padding-box}
+
+/* ===== Recursos trazidos do estoque-pdv ===== */
+.sidebar nav{overflow-y:auto;flex:1;margin-right:-6px;padding-right:6px}
+nav a{padding:8px 12px}
+.nav-sec{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:rgba(244,223,224,.55);padding:14px 12px 6px}
+.nav-sec:first-child{padding-top:0}
+.caixa-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;padding:14px 18px}
+.caixa-bar.fechado{background:var(--bad-2);border-color:transparent}
+.cb-info{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cb-acoes{display:flex;gap:6px;flex-wrap:wrap}
+.pulso{width:10px;height:10px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(46,125,90,.5);animation:pulso 2s infinite}
+.pulso.off{background:var(--bad);animation:none}
+@keyframes pulso{70%{box-shadow:0 0 0 8px rgba(46,125,90,0)}100%{box-shadow:0 0 0 0 rgba(46,125,90,0)}}
+@media (prefers-reduced-motion:reduce){.pulso{animation:none}}
+.inp-preco{width:96px;text-align:right;padding:6px 8px;font-variant-numeric:tabular-nums}
+.kbd-btn{margin-left:6px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:5px;padding:1px 6px;font-size:11px}
+.pg-topo{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px}
+.pg-topo b{display:block;font-size:28px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.pay button.sel{border-color:var(--amora);background:var(--blush);color:var(--amora)}
+.pix-box{display:flex;gap:14px;align-items:center;margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:12px;background:#fffdfc}
+.pix-box #pixQr svg{width:150px;height:150px;display:block}
+.pix-box small{display:block;margin-top:4px}
+.qr-real svg{width:120px;height:120px;display:block;margin:8px auto}
+.cupom.w58{max-width:230px;font-size:11px}
+.check{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);cursor:pointer;margin-top:10px;flex-wrap:wrap}
+.check input[type=checkbox]{width:16px;height:16px;accent-color:var(--amora);margin:0}
+.toolbar .check{margin-top:0}
+tr.grupo{cursor:pointer}
+tr.grupo:hover td{background:#fdf7f5}
+tr.filho td{background:#fcf8f6}
+tr.filho .prod{padding-left:18px}
+.ramo{width:14px;height:18px;border-left:2px solid var(--rosa);border-bottom:2px solid var(--rosa);border-bottom-left-radius:6px;margin-top:-10px;flex:none}
+tr.riscada td{color:var(--muted)}
+tr.riscada td b{text-decoration:line-through}
+.aviso{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:12px;font-size:13px;margin-bottom:14px}
+.aviso.bad{background:var(--bad-2);color:var(--bad)}
+.aviso.warn{background:var(--warn-2);color:var(--warn)}
+.periodo{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap}
+.periodo .field{min-width:160px}
+.atalhos-per{display:flex;gap:4px;flex-wrap:wrap}
+hr.sep{border:0;border-top:1px solid var(--line-2);margin:10px 0}
+.login-form{display:flex;flex-direction:column;gap:14px;margin-top:20px}
+.login-links{display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.login-links .check{margin:0}
+.login a{color:var(--amora);font-weight:600}
+.forca{height:6px;background:var(--line-2);border-radius:99px;overflow:hidden;margin-top:-6px}
+.forca i{display:block;height:100%;width:0;transition:width .2s}
+.users.mini{margin-top:12px}
+.users.mini button{padding:8px 12px}
+@media (max-width:760px){.cb-acoes{width:100%}.cb-acoes .btn{flex:1}.pix-box{flex-direction:column;text-align:center}}

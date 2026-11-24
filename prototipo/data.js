@@ -37,9 +37,16 @@ const PRODUTOS_SEED = [
   ['7896006299985','Esponja de Maquiagem Gota','Acessórios','Macrilan','',4,12.9,40,8,''],
 ];
 
+// Linha = produto "pai"; cada tom/cor é uma variação com código e estoque próprios
+const LINHAS = {
+  '7891350034567': 'Batom Matte Ruby Rose', '7891350034574': 'Batom Matte Ruby Rose',
+  '7899045600112': 'Base Líquida HD Vult', '7899045600129': 'Base Líquida HD Vult',
+  '7891350500011': 'Esmalte Cremoso Risqué', '7891350500028': 'Esmalte Cremoso Risqué',
+};
 const PRODUTOS = PRODUTOS_SEED.map((p, i) => ({
   id: i + 1, ean: p[0], nome: p[1], categoria: p[2], marca: p[3], variacao: p[4],
   custo: p[5], preco: p[6], estoque: p[7], minimo: p[8], validade: p[9],
+  linha: LINHAS[p[0]] || p[1], sku: 'DZ-' + String(i + 1).padStart(4, '0'),
 }));
 
 const CLIENTES = [
@@ -51,16 +58,18 @@ const CLIENTES = [
   { id: 6, nome: 'Beatriz Costa', cpf: '753.159.852-00', fone: '(19) 98456-1122', nasc: '2001-11-25', compras: [] },
 ];
 
+// Senhas apenas de demonstração
 const USUARIOS = [
-  { id: 1, nome: 'Carla (Dona)', perfil: 'admin' },
-  { id: 2, nome: 'Renata', perfil: 'gerente' },
-  { id: 3, nome: 'Bruna', perfil: 'vendedora' },
+  { id: 1, nome: 'Carla (Dona)', email: 'carla@doze.com', senha: 'doze123', perfil: 'admin', status: 'ativo' },
+  { id: 2, nome: 'Renata', email: 'renata@doze.com', senha: 'doze123', perfil: 'gerente', status: 'ativo' },
+  { id: 3, nome: 'Bruna', email: 'bruna@doze.com', senha: 'doze123', perfil: 'vendedora', status: 'ativo' },
+  { id: 4, nome: 'Larissa Prado', email: 'larissa@doze.com', senha: 'doze123', perfil: 'vendedora', status: 'pendente' },
 ];
 
 const PERFIS = {
-  admin:     { nome: 'Administrador', telas: ['painel','caixa','produtos','estoque','clientes','financeiro','usuarios'], verCusto: true },
-  gerente:   { nome: 'Gerente',       telas: ['painel','caixa','produtos','estoque','clientes','financeiro'], verCusto: true },
-  vendedora: { nome: 'Vendedora',     telas: ['caixa','estoque','clientes'], verCusto: false },
+  admin:     { nome: 'Administrador', telas: ['painel','caixa','caixas','vendas','clientes','produtos','estoque','movimentacoes','compras','fornecedores','financeiro','relatorios','usuarios','configuracoes'], verCusto: true, cancelar: true, editarPreco: true },
+  gerente:   { nome: 'Gerente',       telas: ['painel','caixa','caixas','vendas','clientes','produtos','estoque','movimentacoes','compras','fornecedores','financeiro','relatorios'], verCusto: true, cancelar: true, editarPreco: false },
+  vendedora: { nome: 'Vendedora',     telas: ['caixa','caixas','vendas','clientes','estoque'], verCusto: false, cancelar: false, editarPreco: false },
 };
 
 // Gera histórico de vendas dos últimos 60 dias
@@ -84,7 +93,8 @@ function gerarVendas() {
       const data = new Date(dia); data.setHours(9 + Math.floor(rnd() * 10), Math.floor(rnd() * 60));
       const total = itens.reduce((s, i) => s + i.preco * i.qtd, 0);
       const cliente = rnd() < 0.5 ? CLIENTES[Math.floor(rnd() * CLIENTES.length)].id : null;
-      vendas.push({ id: id++, data: data.toISOString(), itens, total, desconto: 0, pagamento: pagamentos[Math.floor(rnd() * 4)], cliente, vendedor: USUARIOS[Math.floor(rnd() * 3)].nome, nfce: String(id).padStart(9, '0') });
+      const pg = pagamentos[Math.floor(rnd() * 4)];
+      vendas.push({ id: id++, data: data.toISOString(), itens, total, desconto: 0, pagamento: pg, pagamentos: [{ forma: pg, valor: total }], troco: 0, cliente, vendedor: USUARIOS[Math.floor(rnd() * 3)].nome, nfce: String(id).padStart(9, '0'), caixa: null });
     }
   }
   return vendas;
@@ -99,3 +109,15 @@ const CONTAS = [
   { id: 6, tipo: 'receber', descricao: 'Repasse maquininha (crédito)', valor: 4380, vencimento: '2026-11-21', pago: false },
   { id: 7, tipo: 'receber', descricao: 'Crediário - Patrícia Alves', valor: 150, vencimento: '2026-11-30', pago: false },
 ];
+
+const FORNECEDORES = [
+  { id: 1, nome: 'Vult Distribuidora', cnpj: '12.345.678/0001-90', fone: '(11) 3456-7890', contato: 'Marcos', email: 'pedidos@vult.exemplo' },
+  { id: 2, nome: 'Salon Line Comercial', cnpj: '23.456.789/0001-01', fone: '(11) 4002-8922', contato: 'Aline', email: 'vendas@salonline.exemplo' },
+  { id: 3, nome: 'Atacado Beleza Limeira', cnpj: '34.567.890/0001-12', fone: '(19) 3441-2200', contato: 'Sérgio', email: 'contato@atacadobeleza.exemplo' },
+];
+
+// Configurações da loja (dados impressos no cupom e Pix)
+const CONFIG = {
+  nome: 'DOZE COSMÉTICOS LTDA', cnpj: '00.000.000/0001-00', endereco: 'Rua Exemplo, 123 - Centro', cidade: 'Limeira', uf: 'SP', fone: '(19) 99999-0000',
+  chavePix: 'pix@doze.com', nomePix: 'DOZE COSMETICOS', cidadePix: 'LIMEIRA', largura: 80, rodape: 'Obrigada pela preferência! Trocas em até 7 dias com o cupom.',
+};

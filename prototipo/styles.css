@@ -329,6 +329,19 @@ tr.grupo{cursor:pointer}
 tr.grupo:hover td{background:#fdf7f5}
 tr.filho td{background:#fcf8f6}
 tr.filho .prod{padding-left:18px}
+/* Produto com variações: faixa lateral, selo com a quantidade e variações em bloco tingido */
+tr.grupo td:first-child{box-shadow:inset 4px 0 0 var(--rosa)}
+tr.grupo.aberta td{background:var(--blush);border-bottom-color:transparent}
+tr.grupo.aberta td:first-child{box-shadow:inset 4px 0 0 var(--amora)}
+tr.grupo.aberta:hover td{background:#f0d6d8}
+.var-badge{display:inline-flex;align-items:center;gap:4px;margin-left:6px;padding:2px 8px;border-radius:999px;background:var(--blush);color:var(--amora);font-size:11.5px;font-weight:600;vertical-align:middle}
+.var-badge svg{width:12px;height:12px}
+tr.grupo.aberta .var-badge{background:#fff}
+tr.filho td{background:#fbeff0;border-bottom:1px solid #f3dfe1}
+tr.filho td:first-child{box-shadow:inset 4px 0 0 var(--amora)}
+tr.filho .ramo{color:var(--amora)}
+tr.filho .prod b{color:var(--amora-900)}
+tr.filho.ultimo td{border-bottom:2px solid var(--rosa)}
 .ramo{width:20px;display:grid;place-items:center;color:var(--terra);flex:none}
 tr.riscada td{color:var(--muted)}
 tr.riscada td b{text-decoration:line-through}

@@ -1,7 +1,7 @@
 // Service worker: guarda as telas para abrir rápido e funcionar sem internet.
 // Sempre tenta a rede primeiro (para pegar a versão nova) e usa o que está guardado se cair.
-const CACHE = 'doze-v15';
-self.addEventListener('install', e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', 'index.html', 'styles.css?v=15', 'data.js?v=15', 'app.js?v=15', 'pdv.js?v=15', 'paginas.js?v=15', 'painel.js?v=15', 'ux.js?v=15', 'selo.svg']).catch(() => {}))); });
+const CACHE = 'doze-v16';
+self.addEventListener('install', e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', 'index.html', 'styles.css?v=16', 'data.js?v=16', 'app.js?v=16', 'pdv.js?v=16', 'paginas.js?v=16', 'painel.js?v=16', 'ux.js?v=16', 'selo.svg']).catch(() => {}))); });
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;

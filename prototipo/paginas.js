@@ -15,13 +15,15 @@ function ajustarEstoque(id) {
   </form>
   <div class="acoes"><button class="btn sec" onclick="fecharModal()">Cancelar</button><button class="btn" onclick="salvarAjuste(${id})">${ic('check', 'sm')}Confirmar ajuste</button></div>`, true);
 }
-function salvarAjuste(id) {
+async function salvarAjuste(id) {
   const p = S.produtos.find(x => x.id === id), d = Object.fromEntries(new FormData($('#faj'))), q = Math.max(0, Math.round(+d.qtd || 0));
   const novo = d.tipo === 'entrada' ? p.estoque + q : d.tipo === 'saida' ? p.estoque - q : q;
   if (novo < 0) return toast('O estoque ficaria negativo', true);
   if (novo === p.estoque) return toast('Nada mudou', true);
+  const motivo = d.motivo + (d.obs ? ' · ' + d.obs : '');
+  await persistir('estoque.ajustar', { tipo: 'Ajuste', motivo, itens: [{ id, qtd: novo, modo: 'definir' }] });
   const dif = novo - p.estoque; p.estoque = novo;
-  registrarMov(p, 'Ajuste', dif, d.motivo + (d.obs ? ' · ' + d.obs : ''));
+  registrarMov(p, 'Ajuste', dif, motivo);
   fecharModal(); toast('Estoque ajustado'); render();
 }
 
@@ -75,12 +77,13 @@ function cancelarVendaFeita(id) {
   <div class="acoes"><button class="btn sec" onclick="verVenda(${id})">Voltar</button><button class="btn danger" onclick="confirmarCancelamento(${id})">${ic('ban', 'sm')}Confirmar cancelamento</button></div>`, true);
   setTimeout(() => $('#motCanc').focus(), 50);
 }
-function confirmarCancelamento(id) {
+async function confirmarCancelamento(id) {
   const m = $('#motCanc').value.trim();
   if (m.length < 5) return toast('Escreva o motivo (mínimo 5 letras)', true);
   const v = S.vendas.find(x => x.id === id);
+  const srv = await persistir('venda.cancelar', { id, motivo: m });
   v.itens.forEach(i => { const p = S.produtos.find(x => x.id === i.id); if (p) { p.estoque += i.qtd; registrarMov(p, 'Cancelamento', i.qtd, 'Venda #' + v.id + ' cancelada'); } });
-  v.cancelada = { motivo: m, data: new Date().toISOString(), usuario: S.usuario.nome };
+  v.cancelada = srv ? srv.venda.cancelada : { motivo: m, data: new Date().toISOString(), usuario: S.usuario.nome };
   fecharModal(); toast('Venda cancelada e estoque devolvido'); render();
 }
 
@@ -147,10 +150,11 @@ async function buscarCnpj(idAtual) {
   } catch { info.className = 'muted'; info.textContent = 'Não deu para consultar agora (sem internet?). Preencha à mão.'; }
   finally { cnpjBuscando = ''; }
 }
-function salvarFornecedor(id) {
+async function salvarFornecedor(id) {
   const d = Object.fromEntries(new FormData($('#ff')));
   if (!d.nome.trim()) return toast('Informe o nome', true);
-  if (id) Object.assign(S.fornecedores.find(f => f.id === id), d); else { d.id = Math.max(0, ...S.fornecedores.map(f => f.id)) + 1; S.fornecedores.push(d); }
+  if (real()) Object.assign(d, (await persistir('fornecedor.salvar', { ...d, id })).fornecedor);
+  if (id) Object.assign(S.fornecedores.find(f => f.id === id), d); else { if (!real()) d.id = proximoId(S.fornecedores); S.fornecedores.push(d); }
   fecharModal(); toast('Fornecedor salvo'); render();
 }
 
@@ -199,12 +203,15 @@ function desenharCompra() {
   });
   setTimeout(() => b.focus(), 40);
 }
-function registrarCompra() {
-  const id = Math.max(500, ...S.compras.map(c => c.id)) + 1;
+async function registrarCompra() {
+  const venc = NC.venc || new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
+  const srv = await persistir('compra.criar', { fornecedor: NC.fornecedor ? +NC.fornecedor : null, nota: NC.nota, itens: NC.itens, atualizarCusto: NC.atualizarCusto, lancarConta: NC.lancarConta, venc });
+  const id = srv ? srv.id : Math.max(500, ...S.compras.map(c => c.id)) + 1;
   const total = NC.itens.reduce((s, i) => s + i.qtd * i.custo, 0);
   NC.itens.forEach(i => { const p = S.produtos.find(x => x.id === i.id); p.estoque += i.qtd; if (NC.atualizarCusto) p.custo = i.custo; registrarMov(p, 'Compra', i.qtd, 'Compra #' + id + (NC.nota ? ' · NF ' + NC.nota : '')); });
   S.compras.push({ id, data: new Date().toISOString(), fornecedor: NC.fornecedor ? +NC.fornecedor : null, nota: NC.nota, itens: NC.itens.map(i => ({ ...i })), total, usuario: S.usuario.nome });
-  if (NC.lancarConta) { const f = S.fornecedores.find(x => x.id == NC.fornecedor); S.contas.push({ id: Math.max(...S.contas.map(c => c.id)) + 1, tipo: 'pagar', descricao: `Compra #${id}${f ? ' · ' + f.nome : ''}${NC.nota ? ' · NF ' + NC.nota : ''}`, valor: Math.round(total * 100) / 100, vencimento: NC.venc || new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10), pago: false }); }
+  if (srv && srv.conta) S.contas.push(srv.conta);
+  else if (NC.lancarConta && !srv) { const f = S.fornecedores.find(x => x.id == NC.fornecedor); S.contas.push({ id: proximoId(S.contas), tipo: 'pagar', descricao: `Compra #${id}${f ? ' · ' + f.nome : ''}${NC.nota ? ' · NF ' + NC.nota : ''}`, valor: Math.round(total * 100) / 100, vencimento: NC.venc || new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10), pago: false }); }
   NC = null; fecharModal(); toast('Compra registrada, estoque atualizado'); render();
 }
 function verCompra(id) {
@@ -297,7 +304,7 @@ TELAS.configuracoes = () => {
   $('#fcfg').addEventListener('input', () => { Object.assign(S.config, Object.fromEntries(new FormData($('#fcfg')))); prevCupom(); });
 };
 function prevCupom() { const v = vendasValidas().slice(-1)[0]; $('#prevCupom').innerHTML = v ? htmlCupom(v) : ''; }
-function salvarConfig() { const d = Object.fromEntries(new FormData($('#fcfg'))); d.metaMes = num(d.metaMes); d.metaVendedora = num(d.metaVendedora); Object.assign(S.config, d); toast('Configurações salvas'); }
+async function salvarConfig() { const d = Object.fromEntries(new FormData($('#fcfg'))); d.metaMes = num(d.metaMes); d.metaVendedora = num(d.metaVendedora); await persistir('config.salvar', d); Object.assign(S.config, d); toast('Configurações salvas'); }
 
 // ===== LOGIN com e-mail, senha e aprovação =====
 let modoLogin = 'entrar';
@@ -313,8 +320,8 @@ function telaLogin() {
         <button class="btn xl">${ic('log-in', 'sm')}Entrar</button>
       </form>
       <p class="muted" style="text-align:center;margin-top:14px">Funcionária nova? <a href="javascript:void 0" onclick="modoLogin='criar';telaLogin()">Criar conta</a></p>
-      <div class="note">${ic('info', 'sm')}<span>Demonstração: acesso rápido abaixo (senha <b>doze123</b>).</span></div>
-      <div class="users mini">${USUARIOS.filter(u => u.status === 'ativo').map(u => `<button onclick="entrar(${u.id})"><span class="avatar">${iniciais(u.nome)}</span><span class="tx"><b>${u.nome}</b><small>${PERFIS[u.perfil].nome}</small></span>${ic('chevron-right')}</button>`).join('')}</div>`,
+      <div class="note">${ic('info', 'sm')}<span>Contas de apresentação, com dados fictícios (nada é salvo):</span></div>
+      <div class="users mini">${USUARIOS.filter(u => u.status === 'ativo').map(u => `<button onclick="entrarDemo(${u.id})"><span class="avatar">${iniciais(u.nome)}</span><span class="tx"><b>${u.nome}</b><small>${PERFIS[u.perfil].nome}</small></span>${ic('chevron-right')}</button>`).join('')}</div>`,
     criar: `<h1>Criar conta</h1><p class="sub">Depois de criar, a administradora precisa liberar seu acesso.</p>
       <form id="fl" onsubmit="criarConta();return false" class="login-form">
         <label class="field">Nome completo<input name="nome" placeholder="Como devemos te chamar" required></label>
@@ -348,25 +355,31 @@ function forcaSenha(s) {
   let p = 0; if (s.length >= 8) p++; if (s.length >= 12) p++; if (/[A-Z]/.test(s) && /[a-z]/.test(s)) p++; if (/\d/.test(s)) p++; if (/[^A-Za-z0-9]/.test(s)) p++;
   return [{ nome: 'muito fraca', cor: 'var(--bad)' }, { nome: 'fraca', cor: 'var(--bad)' }, { nome: 'razoável', cor: 'var(--warn)' }, { nome: 'boa', cor: 'var(--warn)' }, { nome: 'forte', cor: 'var(--ok)' }, { nome: 'muito forte', cor: 'var(--ok)' }].map((x, i) => ({ ...x, p: i * 20 }))[p];
 }
-function fazerLogin() {
+// E-mail e senha entram sempre pelo banco (modo real). Os dados fictícios só aparecem nas contas de apresentação.
+async function fazerLogin() {
   const d = Object.fromEntries(new FormData($('#fl')));
-  const u = USUARIOS.find(x => x.email.toLowerCase() === d.email.trim().toLowerCase());
-  if (!u || u.senha !== d.senha) return toast('E-mail ou senha incorretos', true);
-  if (u.status === 'pendente') { modoLogin = 'aguardando'; return telaLogin(); }
-  if (u.status === 'bloqueado') return toast('Acesso bloqueado. Fale com a administradora.', true);
-  entrar(u.id);
+  let r;
+  try { r = await api('auth.login', { email: d.email.trim(), senha: d.senha }); }
+  catch (e) { return toast(e.offline ? 'Servidor indisponível. Para conhecer o sistema, use uma conta de apresentação.' : e.message, true); }
+  if (r.pendente) { modoLogin = 'aguardando'; return telaLogin(); }
+  await entrarReal();
 }
-function criarConta() {
+async function criarConta() {
   const d = Object.fromEntries(new FormData($('#fl')));
-  if (USUARIOS.some(u => u.email.toLowerCase() === d.email.toLowerCase())) return toast('Já existe conta com esse e-mail', true);
   if (forcaSenha(d.senha).p < 40) return toast('Use uma senha mais forte (8+ caracteres, letras e números)', true);
   if (d.senha !== d.senha2) return toast('As senhas não conferem', true);
   if (!d.termos) return toast('É preciso aceitar os termos', true);
-  USUARIOS.push({ id: Math.max(...USUARIOS.map(u => u.id)) + 1, nome: d.nome.trim(), email: d.email.trim(), senha: d.senha, perfil: 'vendedora', status: 'pendente' });
+  let r;
+  try { r = await api('auth.criar', { nome: d.nome.trim(), email: d.email.trim(), senha: d.senha }); }
+  catch (e) { return toast(e.offline ? 'Servidor indisponível. Tente de novo mais tarde.' : e.message, true); }
+  // primeira conta do sistema já entra como administradora
+  if (r.primeiro) { toast('Conta de administradora criada'); return entrarReal(); }
   modoLogin = 'aguardando'; telaLogin();
 }
 const _entrarOrig = entrar;
 entrar = function (id) { modoLogin = 'entrar'; _entrarOrig(id); };
+// Botões de apresentação: sempre com os dados fictícios
+function entrarDemo(id) { MODO = 'demo'; entrar(id); }
 
 // ===== USUÁRIOS (com aprovação) =====
 const _usuariosMatriz = TELAS.usuarios;
@@ -377,12 +390,13 @@ TELAS.usuarios = () => {
   grid.outerHTML = `<div class="card flush tbl-wrap" style="margin-bottom:16px"><div class="card-head" style="padding-bottom:14px"><h3>${ic('users', 'sm')}Pessoas com acesso</h3><small class="muted">Funcionárias novas se cadastram na tela de login e aparecem aqui para aprovação</small></div>
   <table><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Situação</th><th></th></tr></thead><tbody>
   ${USUARIOS.map(u => `<tr><td><div class="prod" style="min-width:0"><span class="avatar">${iniciais(u.nome)}</span><b>${esc(u.nome)}</b>${u.id === S.usuario.id ? ' <span class="pill ok plain">Você</span>' : ''}</div></td><td>${esc(u.email)}</td>
-    <td>${u.id === S.usuario.id ? PERFIS[u.perfil].nome : `<select class="campo" onchange="USUARIOS.find(x=>x.id===${u.id}).perfil=this.value;toast('Perfil alterado')">${Object.entries(PERFIS).map(([k, p]) => `<option value="${k}" ${u.perfil === k ? 'selected' : ''}>${p.nome}</option>`).join('')}</select>`}</td>
+    <td>${u.id === S.usuario.id ? PERFIS[u.perfil].nome : `<select class="campo" onchange="mudarPerfil(${u.id}, this.value)">${Object.entries(PERFIS).map(([k, p]) => `<option value="${k}" ${u.perfil === k ? 'selected' : ''}>${p.nome}</option>`).join('')}</select>`}</td>
     <td><span class="pill ${st[u.status][0]}">${st[u.status][1]}</span></td>
     <td><div class="row-actions">${u.id === S.usuario.id ? '' : u.status === 'ativo' ? `<button class="btn sec" onclick="mudarStatus(${u.id},'bloqueado')">${ic('lock', 'sm')}Bloquear</button>` : `<button class="btn" onclick="mudarStatus(${u.id},'ativo')">${ic('check', 'sm')}Liberar acesso</button>`}</div></td></tr>`).join('')}
   </tbody></table></div>`;
 };
-function mudarStatus(id, st) { USUARIOS.find(u => u.id === id).status = st; toast(st === 'ativo' ? 'Acesso liberado' : 'Acesso bloqueado'); render(); }
+async function mudarPerfil(id, perfil) { await persistir('usuario.atualizar', { id, perfil }); USUARIOS.find(x => x.id === id).perfil = perfil; toast('Perfil alterado'); }
+async function mudarStatus(id, st) { await persistir('usuario.atualizar', { id, status: st }); USUARIOS.find(u => u.id === id).status = st; toast(st === 'ativo' ? 'Acesso liberado' : 'Acesso bloqueado'); render(); }
 
 // ===== Dados de demonstração extras: compras e movimentações =====
 (function semearCompras() {

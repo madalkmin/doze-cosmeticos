@@ -1,0 +1,5 @@
+# Só o index.php da API é acessível; config e demais arquivos ficam bloqueados
+Options -Indexes
+<FilesMatch "^(?!index\.php$).+\.php$">
+  Require all denied
+</FilesMatch>

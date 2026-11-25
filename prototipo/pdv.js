@@ -76,10 +76,12 @@ function clienteRapido() {
   <div class="acoes"><button class="btn sec" onclick="fecharModal()">Voltar</button><button class="btn" onclick="salvarClienteRapido()">${ic('check', 'sm')}Salvar e usar na venda</button></div>`, true);
   setTimeout(() => $('#fcr [name=nome]').focus(), 60);
 }
-function salvarClienteRapido() {
+async function salvarClienteRapido() {
   const d = Object.fromEntries(new FormData($('#fcr')));
   if (!d.nome.trim()) return toast('Informe o nome', true);
-  d.id = Math.max(...S.clientes.map(c => c.id)) + 1; d.nasc = '2000-01-01'; S.clientes.push(d);
+  if (real()) Object.assign(d, (await persistir('cliente.salvar', d)).cliente);
+  else { d.id = proximoId(S.clientes); d.nasc = '2000-01-01'; }
+  S.clientes.push(d);
   S.clienteVenda = d.id; fecharModal(); toast('Cliente cadastrada'); TELAS.caixa();
 }
 
@@ -119,13 +121,20 @@ function addPagamento() {
   PG.pags.push({ forma: PG.forma, valor: v }); desenharPagamento();
 }
 // emitir = false: venda registrada sem NFC-e (comprovante sem valor fiscal)
-function concluirVenda(emitir = true) {
+let concluindo = false; // evita venda dupla com clique duplo enquanto o servidor responde
+async function concluirVenda(emitir = true) {
   const t = totais(), pt = pgTotais();
-  if (pt.falta > 0) return;
-  const id = Math.max(...S.vendas.map(v => v.id)) + 1;
-  S.carrinho.forEach(i => { const p = S.produtos.find(x => x.id === i.id); p.estoque -= i.qtd; registrarMov(p, 'Venda', -i.qtd, 'Venda #' + id); });
-  const princ = [...PG.pags].sort((a, b) => b.valor - a.valor)[0].forma;
-  const venda = { id, data: new Date().toISOString(), itens: S.carrinho.map(i => ({ ...i })), total: t.total, desconto: t.desc, pagamento: princ, pagamentos: PG.pags, troco: pt.troco, cliente: S.clienteVenda ? +S.clienteVenda : null, vendedor: S.usuario.nome, nfce: emitir ? String(Date.now()).slice(-9) : null, caixa: S.caixa.id };
+  if (pt.falta > 0 || concluindo) return;
+  concluindo = true;
+  let venda;
+  try {
+    const princ = [...PG.pags].sort((a, b) => b.valor - a.valor)[0].forma;
+    venda = { data: new Date().toISOString(), itens: S.carrinho.map(i => ({ ...i })), total: t.total, desconto: t.desc, pagamento: princ, pagamentos: PG.pags, troco: pt.troco, cliente: S.clienteVenda ? +S.clienteVenda : null, vendedor: S.usuario.nome, nfce: null, caixa: S.caixa.id };
+    // modo real: o servidor grava a venda, baixa o estoque e devolve número e NFC-e
+    if (real()) venda = (await persistir('venda.criar', { itens: S.carrinho.map(i => ({ id: i.id, qtd: i.qtd, preco: i.preco })), desconto: t.desc, pagamentos: PG.pags, cliente: venda.cliente, emitir })).venda;
+    else { venda.id = proximoId(S.vendas); venda.nfce = emitir ? String(Date.now()).slice(-9) : null; }
+  } finally { concluindo = false; }
+  S.carrinho.forEach(i => { const p = S.produtos.find(x => x.id === i.id); p.estoque -= i.qtd; registrarMov(p, 'Venda', -i.qtd, 'Venda #' + venda.id); });
   S.vendas.push(venda);
   S.carrinho = []; S.desconto = 0; S.clienteVenda = null; PG = null;
   render();
@@ -204,8 +213,9 @@ function confirmarAbertura() {
   dialogo({ icone: 'lock-open', tom: 'ok', titulo: 'Abrir o caixa?', texto: `Caixa aberto por <b>${esc(S.usuario.nome)}</b> com <b>${brl(fundo)}</b> de troco na gaveta.`,
     botoes: [{ label: 'Voltar', estilo: 'sec', acao: () => abrirCaixa(brl(fundo)) }, { label: 'Sim, abrir caixa', icone: 'lock-open', acao: () => efetivarAbertura(fundo) }] });
 }
-function efetivarAbertura(fundo) {
-  S.caixa = { id: Math.max(...S.caixas.map(c => c.id)) + 1, operador: S.usuario.nome, abertoEm: new Date().toISOString(), fundo, movimentos: [], status: 'aberto' };
+async function efetivarAbertura(fundo) {
+  S.caixa = real() ? (await persistir('caixa.abrir', { fundo })).caixa
+    : { id: proximoId(S.caixas), operador: S.usuario.nome, abertoEm: new Date().toISOString(), fundo, movimentos: [], status: 'aberto' };
   S.caixas.push(S.caixa); fecharModal(); toast(`Caixa #${S.caixa.id} aberto com ${brl(fundo)}`); render();
 }
 function movimentoCaixa(tipo) {
@@ -216,11 +226,12 @@ function movimentoCaixa(tipo) {
   <div class="acoes"><button class="btn sec" onclick="fecharModal()">Cancelar</button><button class="btn ${sg ? 'danger' : ''}" onclick="salvarMovimento('${tipo}')">${ic('check', 'sm')}Registrar</button></div>`, true);
   setTimeout(() => $('#fmv [name=valor]').focus(), 50);
 }
-function salvarMovimento(tipo) {
+async function salvarMovimento(tipo) {
   const d = Object.fromEntries(new FormData($('#fmv'))), v = Math.round(num(d.valor) * 100) / 100;
   if (v <= 0) return toast('Informe um valor maior que zero', true);
   if (tipo === 'sangria' && v > esperadoDinheiro(S.caixa)) return toast('Valor maior que o dinheiro na gaveta', true);
-  S.caixa.movimentos.unshift({ tipo, valor: v, motivo: d.motivo, data: new Date().toISOString(), usuario: S.usuario.nome });
+  if (real()) S.caixa.movimentos = (await persistir('caixa.movimento', { tipo, valor: v, motivo: d.motivo })).caixa.movimentos;
+  else S.caixa.movimentos.unshift({ tipo, valor: v, motivo: d.motivo, data: new Date().toISOString(), usuario: S.usuario.nome });
   fecharModal(); toast(tipo === 'sangria' ? 'Sangria registrada' : 'Suprimento registrado'); render();
 }
 function resumoCaixa(c) {
@@ -290,10 +301,13 @@ function confirmarFechamento() {
     texto: `${linhas}<br><br>O dinheiro contado não bate com o esperado. Confira a gaveta, sangrias e trocos antes de fechar. A diferença fica registrada no fechamento.`,
     botoes: [voltar, { label: 'Fechar mesmo assim', estilo: 'danger', icone: 'lock-keyhole', acao: () => efetivarFechamento(contado) }] });
 }
-function efetivarFechamento(contado) {
+async function efetivarFechamento(contado) {
   const c = S.caixa;
-  c.esperado = esperadoDinheiro(c); c.contado = contado; c.diferenca = Math.round((c.contado - c.esperado) * 100) / 100;
-  c.fechadoEm = new Date().toISOString(); c.status = 'fechado'; c.fechadoPor = S.usuario.nome;
+  if (real()) Object.assign(c, (await persistir('caixa.fechar', { contado })).caixa); // esperado calculado no servidor
+  else {
+    c.esperado = esperadoDinheiro(c); c.contado = contado; c.diferenca = Math.round((c.contado - c.esperado) * 100) / 100;
+    c.fechadoEm = new Date().toISOString(); c.status = 'fechado'; c.fechadoPor = S.usuario.nome;
+  }
   S.caixa = null; fecharModal(); render(); toast(`Caixa #${c.id} fechado`);
   setTimeout(() => verCaixa(c.id), 200);
 }

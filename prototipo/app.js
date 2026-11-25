@@ -164,7 +164,11 @@ function entrar(id) {
   render();
   toast(`Olá, ${S.usuario.nome.split(' ')[0]}!`);
 }
-function sair() { S.carrinho = []; S.usuario = null; history.replaceState(null, '', location.pathname); telaLogin(); }
+// No modo real encerra a sessão no servidor e recarrega (volta limpo, sem dados do banco na memória)
+async function sair() {
+  if (real()) { try { await api('auth.sair'); } catch (e) {} history.replaceState(null, '', location.pathname); return location.reload(); }
+  S.carrinho = []; S.usuario = null; history.replaceState(null, '', location.pathname); telaLogin();
+}
 
 // ===== Roteamento =====
 let graficos = [];
@@ -337,7 +341,7 @@ function formProduto(id, eanNovo, baseId) {
   sugerirValores($('#fp [name=linha]'), () => S.produtos.map(x => x.linha || x.nome), 'Linhas cadastradas');
   setTimeout(() => $('#fp [name=' + (base ? 'ean' : eanNovo || id ? 'nome' : 'ean') + ']').focus(), 60);
 }
-function salvarProduto(id) {
+async function salvarProduto(id) {
   const d = Object.fromEntries(new FormData($('#fp')));
   if (!d.ean || !d.nome || !num(d.preco)) return toast('Preencha código, nome e preço', true);
   d.ean = codBarras(d.ean);
@@ -347,10 +351,14 @@ function salvarProduto(id) {
   // marca digitada: usa a grafia já cadastrada se existir; se for nova, entra na lista de marcas
   d.marca = d.marca.trim(); d.linha = d.linha.trim();
   const mExist = MARCAS.find(m => m.toLowerCase() === d.marca.toLowerCase());
-  if (mExist) d.marca = mExist; else if (d.marca) MARCAS.push(d.marca);
+  if (mExist) d.marca = mExist;
   if (!d.linha) d.linha = d.nome;
+  if (!id) d.estoque = +d.estoque || 0;
+  // modo real: grava no banco primeiro; id, SKU e estoque passam a vir do servidor
+  if (real()) Object.assign(d, (await persistir('produto.salvar', { ...d, id })).produto);
+  if (!mExist && d.marca) MARCAS.push(d.marca);
   if (id) Object.assign(S.produtos.find(p => p.id === id), d);
-  else { d.estoque = +d.estoque || 0; d.id = Math.max(...S.produtos.map(p => p.id)) + 1; d.sku = d.sku || 'DZ-' + String(d.id).padStart(4, '0'); S.produtos.push(d); if (d.estoque) registrarMov(d, 'Entrada', d.estoque, 'Estoque inicial'); }
+  else { if (!real()) { d.id = proximoId(S.produtos); d.sku = d.sku || 'DZ-' + String(d.id).padStart(4, '0'); } S.produtos.push(d); if (d.estoque) registrarMov(d, 'Entrada', d.estoque, 'Estoque inicial'); }
   fecharModal(); toast('Produto salvo'); render();
 }
 
@@ -422,8 +430,9 @@ function desenharContagem() {
     return `<tr class="${p.id === S.ultimoEst ? 'flash' : ''}"><td><div class="prod" style="min-width:0">${thumb(p.categoria, true)}<b>${esc(p.nome)}</b></div></td><td class="num">${p.estoque}</td><td class="num"><b>${ent ? '+' : ''}${c}</b></td><td class="num">${ent ? `<b>${p.estoque + c}</b>` : `<span class="pill ${dif === 0 ? 'ok' : 'bad'}">${dif === 0 ? 'Confere' : (dif > 0 ? '+' : '') + dif}</span>`}</td></tr>`; }).join('')}</tbody></table></div>
   <div class="acoes"><button class="btn sec" onclick="recomecarContagem()">${ic('rotate-ccw', 'sm')}Recomeçar</button><button class="btn" onclick="confirmarEstoque()">${ic('check', 'sm')}${ent ? 'Confirmar entrada' : 'Ajustar estoque'}</button></div>`;
 }
-function confirmarEstoque() {
+async function confirmarEstoque() {
   const ent = modoEstoque === 'entrada';
+  await persistir('estoque.ajustar', { tipo: ent ? 'Entrada' : 'Ajuste', motivo: ent ? 'Entrada por bipe' : 'Contagem de prateleira', itens: Object.entries(contagem).map(([id, c]) => ({ id: +id, qtd: c, modo: ent ? 'somar' : 'definir' })) });
   Object.entries(contagem).forEach(([id, c]) => {
     const p = S.produtos.find(x => x.id == id), antes = p.estoque;
     p.estoque = ent ? p.estoque + c : c;
@@ -459,10 +468,12 @@ function formCliente() {
   <div class="acoes"><button class="btn sec" onclick="fecharModal()">Cancelar</button><button class="btn" onclick="salvarCliente()">${ic('check', 'sm')}Salvar</button></div>`);
   setTimeout(() => $('#fc [name=nome]').focus(), 60);
 }
-function salvarCliente() {
+async function salvarCliente() {
   const d = Object.fromEntries(new FormData($('#fc')));
   if (!d.nome) return toast('Informe o nome', true);
-  d.id = Math.max(...S.clientes.map(c => c.id)) + 1; d.nasc = d.nasc || '2000-01-01'; S.clientes.push(d);
+  if (real()) Object.assign(d, (await persistir('cliente.salvar', d)).cliente);
+  else { d.id = proximoId(S.clientes); d.nasc = d.nasc || '2000-01-01'; }
+  S.clientes.push(d);
   fecharModal(); toast('Cliente cadastrada'); render();
 }
 
@@ -590,7 +601,9 @@ function recomecarContagem() {
   const antes = { ...contagem }; contagem = {}; desenharContagem();
   toast('Lista zerada', false, () => { contagem = antes; desenharContagem(); });
 }
-function darBaixa(id) {
-  const c = S.contas.find(x => x.id === id); c.pago = true; render();
-  toast(`Baixa registrada: ${c.descricao}`, false, () => { c.pago = false; render(); });
+async function darBaixa(id) {
+  const c = S.contas.find(x => x.id === id);
+  await persistir('conta.pago', { id, pago: true });
+  c.pago = true; render();
+  toast(`Baixa registrada: ${c.descricao}`, false, async () => { await persistir('conta.pago', { id, pago: false }); c.pago = false; render(); });
 }

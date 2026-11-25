@@ -1,2 +1,5 @@
 .impeccable/
 .claude/
+
+# Credenciais do banco (nunca vão para o GitHub)
+prototipo/api/config.php

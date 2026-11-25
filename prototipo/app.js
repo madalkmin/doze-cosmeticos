@@ -1,5 +1,8 @@
 // ===== Utilidades =====
 const brl = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+// Moeda: num() lê "R$ 1.234,56" (ou número), moeda() formata o valor inicial do campo
+const num = v => typeof v === 'number' ? v : +String(v ?? '').replace(/[^\d,-]/g, '').replace(',', '.') || 0;
+const moeda = v => v === '' || v == null ? '' : brl(+v);
 const $ = s => document.querySelector(s);
 const hojeISO = () => new Date().toISOString().slice(0, 10);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -306,7 +309,7 @@ function formProduto(id, eanNovo, baseId) {
   abrirModal(`<div class="modal-head">${thumb(p.categoria)}<div><h2>${id ? 'Editar produto' : base ? 'Nova variação' : 'Novo produto'}</h2><p>${id ? esc(p.nome) : base ? 'Novo tom/cor de ' + esc(base.linha || base.nome) + '. Bipe a embalagem para o código.' : 'Bipe o produto para preencher o código'}</p></div></div>
   <form id="fp" class="form-grid" onsubmit="return false">
     <label class="field full">Código de barras<div class="input-ico">${ic('scan-barcode', 'sm')}<input name="ean" value="${p.ean}" required></div></label>
-    <label class="field full">Nome do produto<input name="nome" value="${esc(p.nome)}" required placeholder="Ex.: Batom Matte Vermelho"></label>
+    <label class="field full">Nome do produto<span><input name="nome" value="${esc(p.nome)}" required placeholder="Ex.: Batom Matte Vermelho"></span></label>
     <label class="field">Categoria<select class="campo" name="categoria">${CATEGORIAS.map(c => `<option ${p.categoria === c ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
     <label class="field">Marca<select class="campo" name="marca">${MARCAS.map(c => `<option ${p.marca === c ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
     <label class="field">Variação (cor, tom, tamanho)<input name="variacao" value="${esc(p.variacao)}" placeholder="Ex.: Nude, Bege 03"></label>
@@ -314,21 +317,22 @@ function formProduto(id, eanNovo, baseId) {
     <label class="field">SKU (código interno)<input name="sku" value="${esc(p.sku || '')}" placeholder="Gerado se vazio"></label>
     <label class="field">Validade<input name="validade" type="month" value="${p.validade}"></label>
     <div class="form-sec">Preço</div>
-    <label class="field">Custo (R$)<input name="custo" type="number" step="0.01" value="${p.custo}" required></label>
-    <label class="field">Venda (R$)<input name="preco" type="number" step="0.01" value="${p.preco}" required></label>
+    <label class="field">Custo (R$)<input name="custo" type="text" inputmode="numeric" data-moeda value="${moeda(p.custo)}" placeholder="R$ 0,00" required></label>
+    <label class="field">Venda (R$)<input name="preco" type="text" inputmode="numeric" data-moeda value="${moeda(p.preco)}" placeholder="R$ 0,00" required></label>
     <div class="form-sec">Estoque e fiscal</div>
     <label class="field">Estoque atual<input name="estoque" type="number" value="${p.estoque}" ${id ? 'disabled title="Ajuste pela tela de Estoque"' : ''}></label>
     <label class="field">Avisar quando chegar a<input name="minimo" type="number" value="${p.minimo}"></label>
     <label class="field full">NCM / CFOP (nota fiscal)<input value="3304.10.00 / 5102"></label>
   </form>
   <div class="acoes"><button class="btn sec" onclick="fecharModal()">Cancelar</button><button class="btn" onclick="salvarProduto(${id || 0})">${ic('check', 'sm')}Salvar produto</button></div>`);
+  autocompletarNome($('#fp [name=nome]'), id || 0);
   setTimeout(() => $('#fp [name=' + (base ? 'ean' : eanNovo || id ? 'nome' : 'ean') + ']').focus(), 60);
 }
 function salvarProduto(id) {
   const d = Object.fromEntries(new FormData($('#fp')));
-  if (!d.ean || !d.nome || !d.preco) return toast('Preencha código, nome e preço', true);
+  if (!d.ean || !d.nome || !num(d.preco)) return toast('Preencha código, nome e preço', true);
   if (S.produtos.some(p => p.ean === d.ean && p.id !== id)) return toast('Já existe produto com esse código', true);
-  ['custo', 'preco', 'minimo'].forEach(k => d[k] = +d[k] || 0);
+  d.custo = num(d.custo); d.preco = num(d.preco); d.minimo = +d.minimo || 0;
   if (!d.linha) d.linha = d.nome;
   if (id) Object.assign(S.produtos.find(p => p.id === id), d);
   else { d.estoque = +d.estoque || 0; d.id = Math.max(...S.produtos.map(p => p.id)) + 1; d.sku = d.sku || 'DZ-' + String(d.id).padStart(4, '0'); S.produtos.push(d); if (d.estoque) registrarMov(d, 'Entrada', d.estoque, 'Estoque inicial'); }

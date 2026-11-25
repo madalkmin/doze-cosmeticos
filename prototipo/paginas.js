@@ -149,7 +149,7 @@ function desenharCompra() {
     <label class="field full">Adicionar produto<div class="input-ico">${ic('scan-barcode', 'sm')}<input id="ncBusca" placeholder="Bipe o código ou digite o nome e Enter" autocomplete="off"></div></label>
   </div>
   ${NC.itens.length ? `<table style="margin-top:12px"><thead><tr><th>Produto</th><th class="num">Qtd</th><th class="num">Custo unit.</th><th class="num">Subtotal</th><th></th></tr></thead><tbody>
-    ${NC.itens.map((i, k) => { const p = S.produtos.find(x => x.id === i.id); return `<tr><td>${esc(p.nome)}${p.variacao ? ' · ' + esc(p.variacao) : ''}<br><small class="muted">custo atual ${brl(p.custo)}</small></td><td class="num"><input class="inp-preco" type="number" min="1" step="1" value="${i.qtd}" onchange="NC.itens[${k}].qtd=Math.max(1,+this.value||1);desenharCompra()"></td><td class="num"><input class="inp-preco" type="number" min="0" step="0.01" value="${i.custo.toFixed(2)}" onchange="NC.itens[${k}].custo=Math.max(0,+this.value||0);desenharCompra()"></td><td class="num"><b>${brl(i.qtd * i.custo)}</b></td><td><button class="icon-btn del" onclick="NC.itens.splice(${k},1);desenharCompra()">${ic('x', 'sm')}</button></td></tr>`; }).join('')}
+    ${NC.itens.map((i, k) => { const p = S.produtos.find(x => x.id === i.id); return `<tr><td>${esc(p.nome)}${p.variacao ? ' · ' + esc(p.variacao) : ''}<br><small class="muted">custo atual ${brl(p.custo)}</small></td><td class="num"><input class="inp-preco" type="number" min="1" step="1" value="${i.qtd}" onchange="NC.itens[${k}].qtd=Math.max(1,+this.value||1);desenharCompra()"></td><td class="num"><input class="inp-preco" type="text" inputmode="numeric" data-moeda value="${brl(i.custo)}" onchange="NC.itens[${k}].custo=Math.max(0,num(this.value));desenharCompra()"></td><td class="num"><b>${brl(i.qtd * i.custo)}</b></td><td><button class="icon-btn del" onclick="NC.itens.splice(${k},1);desenharCompra()">${ic('x', 'sm')}</button></td></tr>`; }).join('')}
   </tbody></table>` : `<div class="empty" style="padding:24px">Adicione os produtos recebidos.</div>`}
   <div class="sum-total" style="margin-top:8px"><span>Total da compra</span><b>${brl(tot)}</b></div>
   <label class="check"><input type="checkbox" id="ncCusto" ${NC.atualizarCusto ? 'checked' : ''}> Atualizar o preço de custo dos produtos</label>
@@ -255,8 +255,8 @@ TELAS.configuracoes = () => {
         <label class="field">Largura da impressora<select class="campo" name="largura"><option value="80" ${+c.largura === 80 ? 'selected' : ''}>80 mm</option><option value="58" ${+c.largura === 58 ? 'selected' : ''}>58 mm</option></select></label>
         <label class="field full">Mensagem no rodapé<input name="rodape" value="${esc(c.rodape)}"></label>
         <div class="form-sec">Metas (aparecem no painel)</div>
-        <label class="field">Meta de faturamento do mês (R$)<input name="metaMes" type="number" step="0.01" min="0" value="${metaDoMes().toFixed(2)}"></label>
-        <label class="field">Meta mensal por vendedora (R$)<input name="metaVendedora" type="number" step="0.01" min="0" value="${metaDaVendedora().toFixed(2)}"></label>
+        <label class="field">Meta de faturamento do mês (R$)<input name="metaMes" type="text" inputmode="numeric" data-moeda value="${brl(metaDoMes())}"></label>
+        <label class="field">Meta mensal por vendedora (R$)<input name="metaVendedora" type="text" inputmode="numeric" data-moeda value="${brl(metaDaVendedora())}"></label>
       </form>
       <div class="acoes"><button class="btn" onclick="salvarConfig()">${ic('check', 'sm')}Salvar</button></div></div>
     <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
@@ -270,7 +270,7 @@ TELAS.configuracoes = () => {
   $('#fcfg').addEventListener('input', () => { Object.assign(S.config, Object.fromEntries(new FormData($('#fcfg')))); prevCupom(); });
 };
 function prevCupom() { const v = vendasValidas().slice(-1)[0]; $('#prevCupom').innerHTML = v ? htmlCupom(v) : ''; }
-function salvarConfig() { const d = Object.fromEntries(new FormData($('#fcfg'))); d.metaMes = +d.metaMes || 0; d.metaVendedora = +d.metaVendedora || 0; Object.assign(S.config, d); toast('Configurações salvas'); }
+function salvarConfig() { const d = Object.fromEntries(new FormData($('#fcfg'))); d.metaMes = num(d.metaMes); d.metaVendedora = num(d.metaVendedora); Object.assign(S.config, d); toast('Configurações salvas'); }
 
 // ===== LOGIN com e-mail, senha e aprovação =====
 let modoLogin = 'entrar';

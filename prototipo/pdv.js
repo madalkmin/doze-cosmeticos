@@ -23,7 +23,7 @@ TELAS.caixa = () => {
         <div class="card-head" style="padding-bottom:14px"><h3>${ic('shopping-bag', 'sm')}Itens da venda</h3><span class="pill rose plain">${t.itens} ${t.itens === 1 ? 'item' : 'itens'}</span></div>
         ${S.carrinho.length ? `<div class="tbl-wrap"><table><thead><tr><th>Produto</th><th class="num">Unitário</th><th style="text-align:center">Qtd</th><th class="num">Total</th><th></th></tr></thead><tbody>
         ${S.carrinho.map((i, k) => `<tr class="cart-row ${i.id === S.ultimo ? 'flash' : ''}"><td><div class="prod">${thumb(i.categoria, true)}<span><b>${esc(i.nome)}</b><small>${i.marca}${i.variacao ? ' · ' + i.variacao : ''} · <span class="code">${i.ean}</span></small></span></div></td>
-          <td class="num">${ep ? `<input class="inp-preco" type="number" step="0.01" min="0" value="${i.preco.toFixed(2)}" title="Preço editável pelo administrador" onchange="mudaPreco(${k}, this.value)">` : brl(i.preco)}</td>
+          <td class="num">${ep ? `<input class="inp-preco" type="text" inputmode="numeric" data-moeda value="${brl(i.preco)}" title="Preço editável pelo administrador" onchange="mudaPreco(${k}, this.value)">` : brl(i.preco)}</td>
           <td style="text-align:center"><span class="stepper"><button onclick="mudaQtd(${k},-1)" aria-label="Diminuir">${ic('minus', 'sm')}</button><span>${i.qtd}</span><button onclick="mudaQtd(${k},1)" aria-label="Aumentar">${ic('plus', 'sm')}</button></span></td>
           <td class="num"><b>${brl(i.preco * i.qtd)}</b></td><td><button class="icon-btn del" title="Remover" onclick="mudaQtd(${k},-999)">${ic('trash-2', 'sm')}</button></td></tr>`).join('')}
         </tbody></table></div>` : `<div class="empty"><div class="ring">${ic('scan-barcode', 'xl')}</div><b>Pronto para bipar</b>Passe o produto no leitor para começar a venda.</div>`}
@@ -43,7 +43,7 @@ TELAS.caixa = () => {
       <div class="card" style="display:flex;flex-direction:column;gap:14px">
         <div>
           <div class="sum-line"><span>Subtotal</span><span>${brl(t.sub)}</span></div>
-          <div class="sum-line"><span>Desconto</span><input id="desc" type="number" min="0" step="0.01" placeholder="R$ 0,00" value="${S.desconto || ''}" style="width:120px;text-align:right;padding:7px 10px"></div>
+          <div class="sum-line"><span>Desconto</span><input id="desc" type="text" inputmode="numeric" data-moeda placeholder="R$ 0,00" value="${S.desconto ? brl(S.desconto) : ''}" style="width:120px;text-align:right;padding:7px 10px"></div>
           <div class="sum-total"><span>Total</span><b>${brl(t.total)}</b></div>
         </div>
         <button class="btn xl" onclick="finalizarVenda()" ${S.carrinho.length && S.caixa ? '' : 'disabled'}>${ic('receipt')}Finalizar venda <kbd class="kbd-btn">F2</kbd></button>
@@ -54,7 +54,7 @@ TELAS.caixa = () => {
   </div>`;
   const inp = $('#bipe');
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); bipar(inp.value); } });
-  $('#desc').addEventListener('change', e => { S.desconto = Math.max(0, +e.target.value || 0); TELAS.caixa(); });
+  $('#desc').addEventListener('change', e => { S.desconto = Math.max(0, num(e.target.value)); TELAS.caixa(); });
   $('#cliVenda').addEventListener('change', e => S.clienteVenda = e.target.value || null);
   focarBipe();
 };
@@ -69,7 +69,7 @@ function mudaQtd(k, d) {
   }
   TELAS.caixa();
 }
-function mudaPreco(k, v) { S.carrinho[k].preco = Math.max(0, +v || 0); TELAS.caixa(); toast('Preço alterado só nesta venda'); }
+function mudaPreco(k, v) { S.carrinho[k].preco = Math.max(0, num(v)); TELAS.caixa(); toast('Preço alterado só nesta venda'); }
 function clienteRapido() {
   abrirModal(`<div class="modal-head"><span class="ico-chip">${ic('user-plus', 'lg')}</span><div><h2>Cliente rápido</h2><p>Só o essencial. Dá para completar depois em Clientes.</p></div></div>
   <form id="fcr" class="form-grid" onsubmit="return false"><label class="field full">Nome<input name="nome" required></label><label class="field">CPF (nota fiscal)<input name="cpf" placeholder="000.000.000-00"></label><label class="field">WhatsApp<input name="fone" placeholder="(19) 90000-0000"></label></form>
@@ -103,7 +103,7 @@ function desenharPagamento() {
   <div class="pg-topo"><div><small class="muted">Total</small><b>${brl(t.total)}</b></div>${t.falta > 0 ? `<div style="text-align:right"><small class="muted">Falta</small><b style="color:var(--bad)">${brl(t.falta)}</b></div>` : `<div style="text-align:right"><small class="muted">Troco</small><b style="color:var(--ok)">${brl(t.troco)}</b></div>`}</div>
   ${t.falta > 0 ? `<form id="fpg" onsubmit="addPagamento();return false">
     <div class="pay">${PAGAMENTOS.map(([p, i]) => `<button type="button" class="${PG.forma === p ? 'sel' : ''}" onclick="PG.forma='${p}';desenharPagamento()">${ic(i)}${p}</button>`).join('')}</div>
-    <div style="display:flex;gap:8px;margin-top:12px"><input id="pgValor" type="number" step="0.01" min="0" value="${t.falta.toFixed(2)}" style="font-size:18px;height:46px"><button class="btn" style="height:46px">${ic('plus', 'sm')}Adicionar</button></div>
+    <div style="display:flex;gap:8px;margin-top:12px"><input id="pgValor" type="text" inputmode="numeric" data-moeda value="${brl(t.falta)}" style="font-size:18px;height:46px"><button class="btn" style="height:46px">${ic('plus', 'sm')}Adicionar</button></div>
     ${PG.forma === 'Dinheiro' ? `<small class="muted" style="display:block;margin-top:6px">Em dinheiro pode passar do valor: o sistema calcula o troco.</small>` : ''}
   </form>` : ''}
   ${PG.pags.length ? `<div class="list" style="margin-top:12px">${PG.pags.map((p, k) => `<div class="list-item"><span class="ico-chip" style="width:34px;height:34px">${ic(PAGAMENTOS.find(x => x[0] === p.forma)[1], 'sm')}</span><span class="tx"><b>${p.forma}</b></span><b class="num">${brl(p.valor)}</b><button class="icon-btn del" title="Remover" onclick="PG.pags.splice(${k},1);desenharPagamento()">${ic('x', 'sm')}</button></div>`).join('')}</div>` : ''}
@@ -113,7 +113,7 @@ function desenharPagamento() {
   const v = $('#pgValor'); if (v) setTimeout(() => { v.focus(); v.select(); }, 40);
 }
 function addPagamento() {
-  const v = Math.round((+$('#pgValor').value || 0) * 100) / 100, t = pgTotais();
+  const v = Math.round(num($('#pgValor').value) * 100) / 100, t = pgTotais();
   if (v <= 0) return;
   if (PG.forma !== 'Dinheiro' && v > t.falta + 0.001) return toast('Só dinheiro pode passar do valor restante (para gerar troco)', true);
   PG.pags.push({ forma: PG.forma, valor: v }); desenharPagamento();
@@ -191,12 +191,12 @@ function imprimirHtml(html) {
 function abrirCaixa() {
   if (S.caixa) return toast('Já existe um caixa aberto');
   abrirModal(`<div class="modal-head"><span class="ico-chip ok">${ic('lock-open', 'lg')}</span><div><h2>Abrir caixa</h2><p>Informe o dinheiro que já está na gaveta para troco (fundo de caixa).</p></div></div>
-  <form onsubmit="confirmarAbertura();return false"><label class="field">Valor inicial em dinheiro<input id="fundo" type="number" step="0.01" min="0" value="200.00" style="font-size:18px;height:46px"></label></form>
+  <form onsubmit="confirmarAbertura();return false"><label class="field">Valor inicial em dinheiro<input id="fundo" type="text" inputmode="numeric" data-moeda value="R$ 200,00" style="font-size:18px;height:46px"></label></form>
   <div class="acoes"><button class="btn sec" onclick="fecharModal()">Cancelar</button><button class="btn" onclick="confirmarAbertura()">${ic('lock-open', 'sm')}Abrir caixa</button></div>`, true);
   setTimeout(() => $('#fundo').select(), 50);
 }
 function confirmarAbertura() {
-  const fundo = Math.max(0, +$('#fundo').value || 0);
+  const fundo = Math.max(0, num($('#fundo').value));
   S.caixa = { id: Math.max(...S.caixas.map(c => c.id)) + 1, operador: S.usuario.nome, abertoEm: new Date().toISOString(), fundo, movimentos: [], status: 'aberto' };
   S.caixas.push(S.caixa); fecharModal(); toast(`Caixa #${S.caixa.id} aberto com ${brl(fundo)}`); render();
 }
@@ -204,12 +204,12 @@ function movimentoCaixa(tipo) {
   if (!S.caixa) return toast('Abra o caixa primeiro', true);
   const sg = tipo === 'sangria';
   abrirModal(`<div class="modal-head"><span class="ico-chip ${sg ? 'bad' : 'ok'}">${ic(sg ? 'arrow-up-circle' : 'arrow-down-circle', 'lg')}</span><div><h2>${sg ? 'Sangria' : 'Suprimento'}</h2><p>${sg ? 'Retirada de dinheiro da gaveta (ex.: depósito, pagamento de fornecedor).' : 'Reforço de dinheiro na gaveta (ex.: mais troco).'}</p></div></div>
-  <form id="fmv" class="form-grid" onsubmit="return false"><label class="field">Valor (R$)<input name="valor" type="number" step="0.01" min="0" required></label><label class="field">Motivo<input name="motivo" placeholder="${sg ? 'Ex.: depósito no banco' : 'Ex.: troco extra'}"></label></form>
+  <form id="fmv" class="form-grid" onsubmit="return false"><label class="field">Valor (R$)<input name="valor" type="text" inputmode="numeric" data-moeda placeholder="R$ 0,00" required></label><label class="field">Motivo<input name="motivo" placeholder="${sg ? 'Ex.: depósito no banco' : 'Ex.: troco extra'}"></label></form>
   <div class="acoes"><button class="btn sec" onclick="fecharModal()">Cancelar</button><button class="btn ${sg ? 'danger' : ''}" onclick="salvarMovimento('${tipo}')">${ic('check', 'sm')}Registrar</button></div>`, true);
   setTimeout(() => $('#fmv [name=valor]').focus(), 50);
 }
 function salvarMovimento(tipo) {
-  const d = Object.fromEntries(new FormData($('#fmv'))), v = Math.round((+d.valor || 0) * 100) / 100;
+  const d = Object.fromEntries(new FormData($('#fmv'))), v = Math.round(num(d.valor) * 100) / 100;
   if (v <= 0) return toast('Informe um valor maior que zero', true);
   if (tipo === 'sangria' && v > esperadoDinheiro(S.caixa)) return toast('Valor maior que o dinheiro na gaveta', true);
   S.caixa.movimentos.unshift({ tipo, valor: v, motivo: d.motivo, data: new Date().toISOString(), usuario: S.usuario.nome });
@@ -263,17 +263,17 @@ function fecharCaixa() {
   const c = S.caixa, r = resumoCaixa(c);
   abrirModal(`<div class="modal-head"><span class="ico-chip">${ic('lock-keyhole', 'lg')}</span><div><h2>Fechar caixa #${c.id}</h2><p>Conte o dinheiro da gaveta e informe o valor. O sistema compara com o esperado.</p></div></div>
   <div class="sum-line"><span>Esperado na gaveta</span><b class="num">${brl(r.esperado)}</b></div>
-  <label class="field" style="margin-top:10px">Dinheiro contado<input id="contado" type="number" step="0.01" min="0" style="font-size:18px;height:46px"></label>
+  <label class="field" style="margin-top:10px">Dinheiro contado<input id="contado" type="text" inputmode="numeric" data-moeda placeholder="R$ 0,00" style="font-size:18px;height:46px"></label>
   <div id="difCx" style="margin:12px 0 4px;min-height:26px"></div>
   <div class="acoes"><button class="btn sec" onclick="fecharModal()">Cancelar</button><button class="btn" onclick="confirmarFechamento()">${ic('lock-keyhole', 'sm')}Fechar caixa</button></div>`, true);
-  $('#contado').addEventListener('input', e => { $('#difCx').innerHTML = e.target.value === '' ? '' : difPill((+e.target.value) - r.esperado); });
+  $('#contado').addEventListener('input', e => { $('#difCx').innerHTML = e.target.value === '' ? '' : difPill(num(e.target.value) - r.esperado); });
   setTimeout(() => $('#contado').focus(), 50);
 }
 function confirmarFechamento() {
   const v = $('#contado').value;
   if (v === '') return toast('Informe o dinheiro contado', true);
   const c = S.caixa;
-  c.esperado = esperadoDinheiro(c); c.contado = Math.round(+v * 100) / 100; c.diferenca = Math.round((c.contado - c.esperado) * 100) / 100;
+  c.esperado = esperadoDinheiro(c); c.contado = Math.round(num(v) * 100) / 100; c.diferenca = Math.round((c.contado - c.esperado) * 100) / 100;
   c.fechadoEm = new Date().toISOString(); c.status = 'fechado'; c.fechadoPor = S.usuario.nome;
   S.caixa = null; fecharModal(); render(); toast(`Caixa #${c.id} fechado`);
   setTimeout(() => verCaixa(c.id), 200);

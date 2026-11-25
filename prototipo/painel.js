@@ -18,14 +18,14 @@ function vendasDoMes(ano, mes, filtro = () => true) {
   return vendasValidas().filter(v => { const d = new Date(v.data); return d.getFullYear() === ano && d.getMonth() === mes && filtro(v); });
 }
 function metaDoMes() {
-  if (+S.config.metaMes) return +S.config.metaMes;
+  if (num(S.config.metaMes)) return num(S.config.metaMes);
   // Sem meta definida: média dos 3 meses anteriores + 10%, arredondada para o milhar
   const a = new Date(); let soma = 0, n = 0;
   for (let k = 1; k <= 3; k++) { const m = new Date(a.getFullYear(), a.getMonth() - k, 1); const t = somaTotal(vendasDoMes(m.getFullYear(), m.getMonth())); if (t) { soma += t; n++; } }
   return n ? Math.ceil(soma / n * 1.1 / 1000) * 1000 : 20000;
 }
 function metaDaVendedora() {
-  if (+S.config.metaVendedora) return +S.config.metaVendedora;
+  if (num(S.config.metaVendedora)) return num(S.config.metaVendedora);
   return Math.ceil(metaDoMes() / 3 / 500) * 500;
 }
 // Ritmo do mês: quanto do mês já passou (conta o dia de hoje pelo horário comercial, 9h às 19h)

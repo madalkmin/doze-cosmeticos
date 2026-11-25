@@ -171,12 +171,12 @@ function erroCampo(form, nome, msg) {
 function limparErro(el) { el.classList.remove('invalido'); el.removeAttribute('aria-invalid'); const lbl = el.closest('.field') || el.parentNode; lbl.querySelectorAll('.erro-campo').forEach(x => x.remove()); }
 // Regras simples de validação por formulário: [campo, teste, mensagem]
 const REGRAS = {
-  fp: [['ean', v => v.trim().length >= 8, 'Bipe ou digite o código de barras (8 dígitos ou mais)'], ['nome', v => v.trim(), 'Informe o nome do produto'], ['preco', v => +v > 0, 'Informe o preço de venda'],
+  fp: [['ean', v => v.trim().length >= 8, 'Bipe ou digite o código de barras (8 dígitos ou mais)'], ['nome', v => v.trim(), 'Informe o nome do produto'], ['preco', v => num(v) > 0, 'Informe o preço de venda'],
     ['ean', (v, f) => !S.produtos.some(p => p.ean === v.trim() && p.id !== +f.dataset.id), 'Já existe um produto com esse código']],
   fc: [['nome', v => v.trim().length >= 3, 'Informe o nome completo'], ['cpf', v => !v || v.length === 14, 'CPF incompleto: são 11 números'], ['fone', v => !v || v.length >= 14, 'WhatsApp incompleto: DDD + número']],
   fcr: [['nome', v => v.trim().length >= 2, 'Informe o nome'], ['cpf', v => !v || v.length === 14, 'CPF incompleto: são 11 números'], ['fone', v => !v || v.length >= 14, 'WhatsApp incompleto: DDD + número']],
   ff: [['nome', v => v.trim(), 'Informe o nome do fornecedor'], ['cnpj', v => !v || v.length === 18, 'CNPJ incompleto: são 14 números']],
-  fmv: [['valor', v => +v > 0, 'Informe um valor maior que zero']],
+  fmv: [['valor', v => num(v) > 0, 'Informe um valor maior que zero']],
 };
 function validar(id) {
   const f = $('#' + id); if (!f || !REGRAS[id]) return true;
@@ -191,7 +191,7 @@ function validar(id) {
 
 // ----- Enter salva o formulário da janela -----
 document.addEventListener('keydown', e => {
-  if (e.key !== 'Enter' || e.shiftKey) return;
+  if (e.key !== 'Enter' || e.shiftKey || e.defaultPrevented) return;
   const el = e.target, f = el.closest && el.closest('#modalBox form');
   if (!f || el.tagName !== 'INPUT' || ['checkbox', 'radio'].includes(el.type) || f.getAttribute('onsubmit') !== 'return false') return;
   if (el.id === 'ncBusca') return;
@@ -396,3 +396,46 @@ function htmlInstalar() {
 }
 async function instalarApp() { if (!pedidoInstalar) return; pedidoInstalar.prompt(); await pedidoInstalar.userChoice; pedidoInstalar = null; const a = $('#pwaArea'); if (a) a.innerHTML = htmlInstalar(); }
 if ('serviceWorker' in navigator && location.protocol !== 'file:') addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+
+// ===== Máscara de moeda =====
+// Campos com data-moeda: digita só números, os dois últimos viram centavos ("1990" → "R$ 19,90").
+// Roda na captura, antes dos listeners das telas, que já leem o valor formatado com num().
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (!el.matches || !el.matches('input[data-moeda]')) return;
+  const dig = el.value.replace(/\D/g, '').replace(/^0+/, '').slice(0, 11);
+  el.value = dig ? brl(+dig / 100) : '';
+}, true);
+document.addEventListener('focusin', e => { if (e.target.matches && e.target.matches('input[data-moeda]')) setTimeout(() => e.target.select(), 0); });
+
+// ===== Autocompletar o nome do produto =====
+// Ao digitar, sugere produtos já cadastrados com esse nome; escolher abre o cadastro dele.
+// Sem escolher nada, o texto digitado continua valendo e é salvo normalmente.
+function autocompletarNome(inp, idAtual) {
+  const caixa = document.createElement('div');
+  caixa.className = 'ac-lista'; caixa.setAttribute('role', 'listbox'); caixa.hidden = true;
+  inp.parentNode.classList.add('ac'); inp.parentNode.appendChild(caixa);
+  inp.setAttribute('autocomplete', 'off'); inp.setAttribute('aria-autocomplete', 'list');
+  let achados = [], ativo = -1;
+  const normal = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const fechar = () => { caixa.hidden = true; ativo = -1; };
+  const desenhar = () => {
+    caixa.innerHTML = `<div class="ac-tit">Já cadastrados</div>` + achados.map((p, k) => `<div class="dz-opt ${k === ativo ? 'ativo' : ''}" data-k="${k}" role="option"><span class="ac-nome"><b>${esc(p.nome)}</b><small>${[p.variacao, p.marca].filter(Boolean).map(esc).join(' · ')}</small></span><small class="muted">${brl(+p.preco || 0)}</small></div>`).join('');
+    caixa.hidden = !achados.length;
+  };
+  const escolher = p => { fechar(); formProduto(p.id); };
+  inp.addEventListener('input', () => {
+    const t = normal(inp.value.trim());
+    achados = t.length < 2 ? [] : S.produtos.filter(p => p.id !== idAtual && normal(p.nome + ' ' + (p.variacao || '')).includes(t)).slice(0, 8);
+    ativo = -1; desenhar();
+  });
+  inp.addEventListener('keydown', e => {
+    if (caixa.hidden) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); ativo = Math.min(achados.length - 1, ativo + 1); desenhar(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); ativo = Math.max(-1, ativo - 1); desenhar(); }
+    else if (e.key === 'Enter' && ativo >= 0) { e.preventDefault(); escolher(achados[ativo]); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fechar(); }
+  });
+  caixa.addEventListener('mousedown', e => { const el = e.target.closest('.dz-opt'); if (el) { e.preventDefault(); escolher(achados[+el.dataset.k]); } });
+  inp.addEventListener('blur', () => setTimeout(fechar, 100));
+}

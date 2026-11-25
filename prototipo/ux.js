@@ -172,7 +172,7 @@ function limparErro(el) { el.classList.remove('invalido'); el.removeAttribute('a
 // Regras simples de validação por formulário: [campo, teste, mensagem]
 const REGRAS = {
   fp: [['ean', v => v.trim().length >= 8, 'Bipe ou digite o código de barras (8 dígitos ou mais)'], ['nome', v => v.trim(), 'Informe o nome do produto'], ['preco', v => num(v) > 0, 'Informe o preço de venda'],
-    ['ean', (v, f) => !S.produtos.some(p => p.ean === v.trim() && p.id !== +f.dataset.id), 'Já existe um produto com esse código']],
+    ['ean', (v, f) => !eanEmUso(v, +f.dataset.id), 'Já existe um produto com esse código de barras']],
   fc: [['nome', v => v.trim().length >= 3, 'Informe o nome completo'], ['cpf', v => !v || v.length === 14, 'CPF incompleto: são 11 números'], ['fone', v => !v || v.length >= 14, 'WhatsApp incompleto: DDD + número']],
   fcr: [['nome', v => v.trim().length >= 2, 'Informe o nome'], ['cpf', v => !v || v.length === 14, 'CPF incompleto: são 11 números'], ['fone', v => !v || v.length >= 14, 'WhatsApp incompleto: DDD + número']],
   ff: [['nome', v => v.trim(), 'Informe o nome do fornecedor'], ['cnpj', v => !v || v.length === 18, 'CNPJ incompleto: são 14 números']],
@@ -438,4 +438,16 @@ function autocompletarNome(inp, idAtual) {
   });
   caixa.addEventListener('mousedown', e => { const el = e.target.closest('.dz-opt'); if (el) { e.preventDefault(); escolher(achados[+el.dataset.k]); } });
   inp.addEventListener('blur', () => setTimeout(fechar, 100));
+}
+
+// Código de barras repetido: avisa embaixo do campo assim que é bipado/digitado
+function avisarEanRepetido(inp, idAtual) {
+  const checar = () => {
+    const dup = eanEmUso(inp.value, idAtual);
+    limparErro(inp);
+    if (dup) { inp.classList.add('invalido'); inp.setAttribute('aria-invalid', 'true'); (inp.closest('.field') || inp.parentNode).insertAdjacentHTML('beforeend', `<small class="erro-campo">${ic('circle-alert', 'sm')}Código já cadastrado em: ${esc(dup.nome)}${dup.variacao ? ' · ' + esc(dup.variacao) : ''}</small>`); }
+  };
+  // setTimeout: roda depois do listener global que limpa erros a cada digitação
+  inp.addEventListener('input', () => setTimeout(checar, 0)); inp.addEventListener('change', checar);
+  if (inp.value) checar();
 }

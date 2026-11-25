@@ -2,6 +2,9 @@
 const brl = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 // Moeda: num() lê "R$ 1.234,56" (ou número), moeda() formata o valor inicial do campo
 const num = v => typeof v === 'number' ? v : +String(v ?? '').replace(/[^\d,-]/g, '').replace(',', '.') || 0;
+// Código de barras: sem espaços, para comparar e salvar sempre igual
+const codBarras = v => String(v ?? '').replace(/\s+/g, '');
+const eanEmUso = (cod, idAtual) => { const c = codBarras(cod); return !!c && S.produtos.find(p => codBarras(p.ean) === c && p.id !== idAtual); };
 const moeda = v => v === '' || v == null ? '' : brl(+v);
 const $ = s => document.querySelector(s);
 const hojeISO = () => new Date().toISOString().slice(0, 10);
@@ -112,7 +115,10 @@ function beep(ok = true) {
 }
 function abrirModal(html, sm) { $('#modalBox').className = 'modal-box' + (sm ? ' sm' : ''); $('#modalBox').innerHTML = html; $('#modal').classList.remove('hidden'); }
 function fecharModal() { $('#modal').classList.add('hidden'); focarBipe(); }
-$('#modal').addEventListener('click', e => { if (e.target.id === 'modal') fecharModal(); });
+// Fecha só se o clique começou E terminou no fundo (selecionar texto e soltar fora não fecha)
+let cliqueNoFundo = false;
+$('#modal').addEventListener('mousedown', e => { cliqueNoFundo = e.target.id === 'modal'; });
+$('#modal').addEventListener('click', e => { if (e.target.id === 'modal' && cliqueNoFundo) fecharModal(); cliqueNoFundo = false; });
 
 // Janela de confirmação própria (substitui confirm() do navegador)
 let _acoes = [];
@@ -326,12 +332,15 @@ function formProduto(id, eanNovo, baseId) {
   </form>
   <div class="acoes"><button class="btn sec" onclick="fecharModal()">Cancelar</button><button class="btn" onclick="salvarProduto(${id || 0})">${ic('check', 'sm')}Salvar produto</button></div>`);
   autocompletarNome($('#fp [name=nome]'), id || 0);
+  avisarEanRepetido($('#fp [name=ean]'), id || 0);
   setTimeout(() => $('#fp [name=' + (base ? 'ean' : eanNovo || id ? 'nome' : 'ean') + ']').focus(), 60);
 }
 function salvarProduto(id) {
   const d = Object.fromEntries(new FormData($('#fp')));
   if (!d.ean || !d.nome || !num(d.preco)) return toast('Preencha código, nome e preço', true);
-  if (S.produtos.some(p => p.ean === d.ean && p.id !== id)) return toast('Já existe produto com esse código', true);
+  d.ean = codBarras(d.ean);
+  const dup = eanEmUso(d.ean, id);
+  if (dup) return toast(`Código já usado em: ${dup.nome}${dup.variacao ? ' · ' + dup.variacao : ''}`, true);
   d.custo = num(d.custo); d.preco = num(d.preco); d.minimo = +d.minimo || 0;
   if (!d.linha) d.linha = d.nome;
   if (id) Object.assign(S.produtos.find(p => p.id === id), d);

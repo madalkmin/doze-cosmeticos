@@ -117,8 +117,35 @@ TELAS.fornecedores = () => {
 function formFornecedor(id) {
   const f = id ? S.fornecedores.find(x => x.id === id) : { nome: '', cnpj: '', fone: '', contato: '', email: '' };
   abrirModal(`<div class="modal-head"><span class="ico-chip">${ic('truck', 'lg')}</span><div><h2>${id ? 'Editar fornecedor' : 'Novo fornecedor'}</h2></div></div>
-  <form id="ff" class="form-grid" onsubmit="return false"><label class="field full">Nome<input name="nome" value="${esc(f.nome)}" required></label><label class="field">CNPJ<input name="cnpj" value="${esc(f.cnpj)}" placeholder="00.000.000/0000-00"></label><label class="field">Telefone<input name="fone" value="${esc(f.fone)}"></label><label class="field">Contato<input name="contato" value="${esc(f.contato)}"></label><label class="field">E-mail<input name="email" value="${esc(f.email)}"></label></form>
+  <form id="ff" class="form-grid" onsubmit="return false"><label class="field full">CNPJ<input name="cnpj" value="${esc(f.cnpj)}" inputmode="numeric" placeholder="00.000.000/0000-00"><small class="muted" id="cnpjInfo">Digite o CNPJ para preencher os dados da Receita</small></label><label class="field full">Nome<input name="nome" value="${esc(f.nome)}" required></label><label class="field">Telefone<input name="fone" value="${esc(f.fone)}"></label><label class="field">Contato<input name="contato" value="${esc(f.contato)}"></label><label class="field">E-mail<input name="email" value="${esc(f.email)}"></label></form>
   <div class="acoes"><button class="btn sec" onclick="fecharModal()">Cancelar</button><button class="btn" onclick="salvarFornecedor(${id || 0})">${ic('check', 'sm')}Salvar</button></div>`, true);
+  const cnpj = $('#ff [name=cnpj]');
+  cnpj.addEventListener('input', () => { if (cnpj.value.replace(/\D/g, '').length === 14) buscarCnpj(id || 0); });
+  setTimeout(() => (id ? $('#ff [name=nome]') : cnpj).focus(), 60);
+}
+// Consulta o CNPJ na BrasilAPI (gratuita, dados públicos da Receita) e preenche os campos vazios
+let cnpjBuscando = '';
+async function buscarCnpj(idAtual) {
+  const f = $('#ff'), info = $('#cnpjInfo'), dig = f.cnpj.value.replace(/\D/g, '');
+  if (cnpjBuscando === dig) return; cnpjBuscando = dig;
+  const dup = S.fornecedores.find(x => (x.cnpj || '').replace(/\D/g, '') === dig && x.id !== idAtual);
+  if (dup) { info.className = 'erro-campo'; info.textContent = 'Já cadastrado: ' + dup.nome; cnpjBuscando = ''; return; }
+  info.className = 'muted'; info.textContent = 'Buscando na Receita…';
+  try {
+    const r = await fetch('https://brasilapi.com.br/api/cnpj/v1/' + dig);
+    if (!$('#ff') || f.cnpj.value.replace(/\D/g, '') !== dig) return; // modal fechado ou CNPJ mudou
+    if (r.status === 404 || r.status === 400) { info.className = 'erro-campo'; info.textContent = 'CNPJ não encontrado na Receita. Confira os números.'; return; }
+    if (!r.ok) throw 0;
+    const d = await r.json();
+    const preencher = (nome, v) => { const el = f[nome]; if (el && v && !el.value.trim()) { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); } };
+    preencher('nome', d.nome_fantasia || d.razao_social);
+    preencher('fone', d.ddd_telefone_1 ? MASCARAS.fone(d.ddd_telefone_1) : '');
+    preencher('email', (d.email || '').toLowerCase());
+    const sit = d.descricao_situacao_cadastral || '';
+    info.className = sit && sit !== 'ATIVA' ? 'erro-campo' : 'muted';
+    info.textContent = `${d.razao_social}${sit ? ' · ' + sit.toLowerCase() : ''}${d.municipio ? ' · ' + d.municipio + '/' + d.uf : ''}`;
+  } catch { info.className = 'muted'; info.textContent = 'Não deu para consultar agora (sem internet?). Preencha à mão.'; }
+  finally { cnpjBuscando = ''; }
 }
 function salvarFornecedor(id) {
   const d = Object.fromEntries(new FormData($('#ff')));

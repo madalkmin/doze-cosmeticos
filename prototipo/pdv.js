@@ -191,15 +191,20 @@ function imprimirHtml(html) {
 }
 
 // ===== Abrir / fechar caixa =====
-function abrirCaixa() {
+function abrirCaixa(valor = 'R$ 200,00') {
   if (S.caixa) return toast('Já existe um caixa aberto');
   abrirModal(`<div class="modal-head"><span class="ico-chip ok">${ic('lock-open', 'lg')}</span><div><h2>Abrir caixa</h2><p>Informe o dinheiro que já está na gaveta para troco (fundo de caixa).</p></div></div>
-  <form onsubmit="confirmarAbertura();return false"><label class="field">Valor inicial em dinheiro<input id="fundo" type="text" inputmode="numeric" data-moeda value="R$ 200,00" style="font-size:18px;height:46px"></label></form>
+  <form onsubmit="confirmarAbertura();return false"><label class="field">Valor inicial em dinheiro<input id="fundo" type="text" inputmode="numeric" data-moeda value="${valor}" style="font-size:18px;height:46px"></label></form>
   <div class="acoes"><button class="btn sec" onclick="fecharModal()">Cancelar</button><button class="btn" onclick="confirmarAbertura()">${ic('lock-open', 'sm')}Abrir caixa</button></div>`, true);
   setTimeout(() => $('#fundo').select(), 50);
 }
+// Pede confirmação antes de abrir; "Voltar" reabre o formulário com o valor digitado
 function confirmarAbertura() {
   const fundo = Math.max(0, num($('#fundo').value));
+  dialogo({ icone: 'lock-open', tom: 'ok', titulo: 'Abrir o caixa?', texto: `Caixa aberto por <b>${esc(S.usuario.nome)}</b> com <b>${brl(fundo)}</b> de troco na gaveta.`,
+    botoes: [{ label: 'Voltar', estilo: 'sec', acao: () => abrirCaixa(brl(fundo)) }, { label: 'Sim, abrir caixa', icone: 'lock-open', acao: () => efetivarAbertura(fundo) }] });
+}
+function efetivarAbertura(fundo) {
   S.caixa = { id: Math.max(...S.caixas.map(c => c.id)) + 1, operador: S.usuario.nome, abertoEm: new Date().toISOString(), fundo, movimentos: [], status: 'aberto' };
   S.caixas.push(S.caixa); fecharModal(); toast(`Caixa #${S.caixa.id} aberto com ${brl(fundo)}`); render();
 }
@@ -262,21 +267,32 @@ TELAS.caixas = () => {
       <td><span class="pill ${x.status === 'aberto' ? 'ok' : 'plain'}">${x.status === 'aberto' ? 'Aberto' : 'Fechado'}</span></td><td><div class="row-actions"><button class="icon-btn" title="Ver detalhes" onclick="verCaixa(${x.id})">${ic('eye', 'sm')}</button></div></td></tr>`).join('')}
     </tbody></table></div></div>`;
 };
-function fecharCaixa() {
+function fecharCaixa(valor = '') {
   const c = S.caixa, r = resumoCaixa(c);
   abrirModal(`<div class="modal-head"><span class="ico-chip">${ic('lock-keyhole', 'lg')}</span><div><h2>Fechar caixa #${c.id}</h2><p>Conte o dinheiro da gaveta e informe o valor. O sistema compara com o esperado.</p></div></div>
   <div class="sum-line"><span>Esperado na gaveta</span><b class="num">${brl(r.esperado)}</b></div>
-  <label class="field" style="margin-top:10px">Dinheiro contado<input id="contado" type="text" inputmode="numeric" data-moeda placeholder="R$ 0,00" style="font-size:18px;height:46px"></label>
+  <label class="field" style="margin-top:10px">Dinheiro contado<input id="contado" type="text" inputmode="numeric" data-moeda placeholder="R$ 0,00" value="${valor}" style="font-size:18px;height:46px"></label>
   <div id="difCx" style="margin:12px 0 4px;min-height:26px"></div>
   <div class="acoes"><button class="btn sec" onclick="fecharModal()">Cancelar</button><button class="btn" onclick="confirmarFechamento()">${ic('lock-keyhole', 'sm')}Fechar caixa</button></div>`, true);
-  $('#contado').addEventListener('input', e => { $('#difCx').innerHTML = e.target.value === '' ? '' : difPill(num(e.target.value) - r.esperado); });
+  const mostrarDif = () => { const e = $('#contado'); $('#difCx').innerHTML = e.value === '' ? '' : difPill(num(e.value) - r.esperado); };
+  $('#contado').addEventListener('input', mostrarDif); mostrarDif();
   setTimeout(() => $('#contado').focus(), 50);
 }
+// Pede confirmação antes de fechar; com diferença, o alerta destaca a falta ou a sobra
 function confirmarFechamento() {
   const v = $('#contado').value;
   if (v === '') return toast('Informe o dinheiro contado', true);
+  const c = S.caixa, contado = Math.round(num(v) * 100) / 100, esperado = esperadoDinheiro(c), dif = Math.round((contado - esperado) * 100) / 100;
+  const linhas = `Esperado na gaveta: <b>${brl(esperado)}</b><br>Dinheiro contado: <b>${brl(contado)}</b>`;
+  const voltar = { label: dif ? 'Voltar e recontar' : 'Voltar', estilo: 'sec', acao: () => fecharCaixa(brl(contado)) };
+  if (!dif) return dialogo({ icone: 'lock-keyhole', tom: 'ok', titulo: `Fechar o caixa #${c.id}?`, texto: `${linhas}<br>O valor bate certinho com o esperado.`, botoes: [voltar, { label: 'Sim, fechar caixa', icone: 'lock-keyhole', acao: () => efetivarFechamento(contado) }] });
+  dialogo({ icone: 'triangle-alert', tom: 'bad', titulo: dif < 0 ? `Falta ${brl(-dif)} no caixa` : `Sobra ${brl(dif)} no caixa`,
+    texto: `${linhas}<br><br>O dinheiro contado não bate com o esperado. Confira a gaveta, sangrias e trocos antes de fechar. A diferença fica registrada no fechamento.`,
+    botoes: [voltar, { label: 'Fechar mesmo assim', estilo: 'danger', icone: 'lock-keyhole', acao: () => efetivarFechamento(contado) }] });
+}
+function efetivarFechamento(contado) {
   const c = S.caixa;
-  c.esperado = esperadoDinheiro(c); c.contado = Math.round(num(v) * 100) / 100; c.diferenca = Math.round((c.contado - c.esperado) * 100) / 100;
+  c.esperado = esperadoDinheiro(c); c.contado = contado; c.diferenca = Math.round((c.contado - c.esperado) * 100) / 100;
   c.fechadoEm = new Date().toISOString(); c.status = 'fechado'; c.fechadoPor = S.usuario.nome;
   S.caixa = null; fecharModal(); render(); toast(`Caixa #${c.id} fechado`);
   setTimeout(() => verCaixa(c.id), 200);

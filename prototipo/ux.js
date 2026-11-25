@@ -409,7 +409,7 @@ document.addEventListener('input', e => {
 document.addEventListener('focusin', e => { if (e.target.matches && e.target.matches('input[data-moeda]')) setTimeout(() => e.target.select(), 0); });
 
 // ===== Autocompletar o nome do produto =====
-// Ao digitar, sugere produtos já cadastrados com esse nome; escolher abre o cadastro dele.
+// Ao digitar, sugere produtos já cadastrados com esse nome; escolher copia os dados dele para o formulário.
 // Sem escolher nada, o texto digitado continua valendo e é salvo normalmente.
 function autocompletarNome(inp, idAtual) {
   const caixa = document.createElement('div');
@@ -423,7 +423,16 @@ function autocompletarNome(inp, idAtual) {
     caixa.innerHTML = `<div class="ac-tit">Já cadastrados</div>` + achados.map((p, k) => `<div class="dz-opt ${k === ativo ? 'ativo' : ''}" data-k="${k}" role="option"><span class="ac-nome"><b>${esc(p.nome)}</b><small>${[p.variacao, p.marca].filter(Boolean).map(esc).join(' · ')}</small></span><small class="muted">${brl(+p.preco || 0)}</small></div>`).join('');
     caixa.hidden = !achados.length;
   };
-  const escolher = p => { fechar(); formProduto(p.id); };
+  // Escolher copia os dados do produto para o formulário atual; código, variação, SKU,
+  // estoque e validade ficam como estão (a trava de código repetido continua valendo)
+  const escolher = p => {
+    fechar();
+    const f = inp.form;
+    const campos = { nome: p.nome, categoria: p.categoria, marca: p.marca, linha: p.linha || p.nome, custo: moeda(p.custo), preco: moeda(p.preco), minimo: p.minimo };
+    Object.entries(campos).forEach(([k, v]) => { const el = f.querySelector(`[name="${k}"]`); if (el && v != null) { el.value = v; el.dispatchEvent(new Event('change', { bubbles: true })); } });
+    toast(`Dados copiados de ${p.nome}${p.variacao ? ' · ' + p.variacao : ''}`);
+    const prox = f.querySelector('[name=variacao]'); if (prox) prox.focus();
+  };
   inp.addEventListener('input', () => {
     const t = normal(inp.value.trim());
     achados = t.length < 2 ? [] : S.produtos.filter(p => p.id !== idAtual && normal(p.nome + ' ' + (p.variacao || '')).includes(t)).slice(0, 8);

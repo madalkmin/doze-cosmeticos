@@ -108,7 +108,7 @@ function desenharPagamento() {
   </form>` : ''}
   ${PG.pags.length ? `<div class="list" style="margin-top:12px">${PG.pags.map((p, k) => `<div class="list-item"><span class="ico-chip" style="width:34px;height:34px">${ic(PAGAMENTOS.find(x => x[0] === p.forma)[1], 'sm')}</span><span class="tx"><b>${p.forma}</b></span><b class="num">${brl(p.valor)}</b><button class="icon-btn del" title="Remover" onclick="PG.pags.splice(${k},1);desenharPagamento()">${ic('x', 'sm')}</button></div>`).join('')}</div>` : ''}
   ${pix > 0 ? `<div class="pix-box"><div id="pixQr"></div><div><b>Pix de ${brl(pix)}</b><small class="muted">Peça para a cliente escanear com o app do banco e confirme o recebimento antes de concluir.</small><small class="muted">Chave: ${esc(S.config.chavePix)}</small></div></div>` : ''}
-  <div class="acoes"><button class="btn sec" onclick="fecharModal()">Voltar</button><button class="btn" ${t.falta > 0 ? 'disabled' : ''} onclick="concluirVenda()">${ic('receipt', 'sm')}Concluir e emitir NFC-e</button></div>`);
+  <div class="acoes"><button class="btn sec" onclick="fecharModal()">Voltar</button><button class="btn sec" ${t.falta > 0 ? 'disabled' : ''} onclick="concluirVenda(false)" title="Registra a venda sem nota fiscal">${ic('circle-check', 'sm')}Concluir sem NFC-e</button><button class="btn" ${t.falta > 0 ? 'disabled' : ''} onclick="concluirVenda()">${ic('receipt', 'sm')}Concluir e emitir NFC-e</button></div>`);
   if (pix > 0) $('#pixQr').innerHTML = qrSvg(gerarPix({ chave: S.config.chavePix, nome: S.config.nomePix, cidade: S.config.cidadePix, valor: pix }));
   const v = $('#pgValor'); if (v) setTimeout(() => { v.focus(); v.select(); }, 40);
 }
@@ -118,13 +118,14 @@ function addPagamento() {
   if (PG.forma !== 'Dinheiro' && v > t.falta + 0.001) return toast('Só dinheiro pode passar do valor restante (para gerar troco)', true);
   PG.pags.push({ forma: PG.forma, valor: v }); desenharPagamento();
 }
-function concluirVenda() {
+// emitir = false: venda registrada sem NFC-e (comprovante sem valor fiscal)
+function concluirVenda(emitir = true) {
   const t = totais(), pt = pgTotais();
   if (pt.falta > 0) return;
   const id = Math.max(...S.vendas.map(v => v.id)) + 1;
   S.carrinho.forEach(i => { const p = S.produtos.find(x => x.id === i.id); p.estoque -= i.qtd; registrarMov(p, 'Venda', -i.qtd, 'Venda #' + id); });
   const princ = [...PG.pags].sort((a, b) => b.valor - a.valor)[0].forma;
-  const venda = { id, data: new Date().toISOString(), itens: S.carrinho.map(i => ({ ...i })), total: t.total, desconto: t.desc, pagamento: princ, pagamentos: PG.pags, troco: pt.troco, cliente: S.clienteVenda ? +S.clienteVenda : null, vendedor: S.usuario.nome, nfce: String(Date.now()).slice(-9), caixa: S.caixa.id };
+  const venda = { id, data: new Date().toISOString(), itens: S.carrinho.map(i => ({ ...i })), total: t.total, desconto: t.desc, pagamento: princ, pagamentos: PG.pags, troco: pt.troco, cliente: S.clienteVenda ? +S.clienteVenda : null, vendedor: S.usuario.nome, nfce: emitir ? String(Date.now()).slice(-9) : null, caixa: S.caixa.id };
   S.vendas.push(venda);
   S.carrinho = []; S.desconto = 0; S.clienteVenda = null; PG = null;
   render();
@@ -153,11 +154,12 @@ function qrSvg(texto, cel = 4) {
 // ===== Cupom (DANFE NFC-e simulado) =====
 function htmlCupom(v) {
   const c = S.config, cli = S.clientes.find(x => x.id === v.cliente);
-  const chave = ('3526' + new Date(v.data).toISOString().slice(2, 7).replace('-', '') + c.cnpj.replace(/\D/g, '') + '65001' + v.nfce.padStart(9, '0') + '1' + String(v.id).padStart(8, '0')).slice(0, 44);
+  const fiscal = !!v.nfce; // venda concluída sem NFC-e não tem chave nem QR
+  const chave = !fiscal ? '' : ('3526' + new Date(v.data).toISOString().slice(2, 7).replace('-', '') + c.cnpj.replace(/\D/g, '') + '65001' + v.nfce.padStart(9, '0') + '1' + String(v.id).padStart(8, '0')).slice(0, 44);
   const pags = v.pagamentos || [{ forma: v.pagamento, valor: v.total }];
   return `<div class="cupom ${+c.largura === 58 ? 'w58' : ''}">
     <div class="c"><b>${esc(c.nome)}</b><br>CNPJ ${esc(c.cnpj)}<br>${esc(c.endereco)}<br>${esc(c.cidade)} · ${esc(c.uf)} · ${esc(c.fone)}</div><hr>
-    <div class="c">DANFE NFC-e · Documento Auxiliar da<br>Nota Fiscal de Consumidor Eletrônica</div><hr>
+    <div class="c">${fiscal ? 'DANFE NFC-e · Documento Auxiliar da<br>Nota Fiscal de Consumidor Eletrônica' : '<b>COMPROVANTE DE VENDA</b><br>NÃO É DOCUMENTO FISCAL'}</div><hr>
     ${v.itens.map(i => `<div>${esc(i.nome.slice(0, 32))}</div><div class="row"><span>${i.qtd} x ${brl(i.preco)}</span><span>${brl(i.qtd * i.preco)}</span></div>`).join('')}<hr>
     <div class="row"><span>Qtd. itens</span><span>${v.itens.reduce((s, i) => s + i.qtd, 0)}</span></div>
     ${v.desconto ? `<div class="row"><span>Desconto</span><span>-${brl(v.desconto)}</span></div>` : ''}
@@ -166,15 +168,16 @@ function htmlCupom(v) {
     ${pags.map(p => `<div class="row"><span>${p.forma}</span><span>${brl(p.valor)}</span></div>`).join('')}
     ${v.troco ? `<div class="row"><span>Troco</span><span>${brl(v.troco)}</span></div>` : ''}<hr>
     <div class="c">${cli ? `CONSUMIDOR: ${esc(cli.nome).toUpperCase()}${cli.cpf ? '<br>CPF ' + esc(cli.cpf) : ''}` : 'CONSUMIDOR NÃO IDENTIFICADO'}<br>
-    NFC-e nº ${v.nfce} · Série 001<br>${new Date(v.data).toLocaleString('pt-BR')}${v.cancelada ? '<br><b>*** NFC-e CANCELADA ***</b>' : ''}
-    <div class="qr-real">${qrSvg('https://www.nfce.fazenda.sp.gov.br/qrcode?p=' + chave + '|2|2|1|SIMULACAO', 3)}</div>Consulte pela chave de acesso em<br>nfce.fazenda.sp.gov.br/consulta<br><span style="font-size:9.5px;word-break:break-all">${chave.replace(/(\d{4})/g, '$1 ')}</span></div>
+    ${fiscal ? '' : `Venda nº ${v.id}<br>${new Date(v.data).toLocaleString('pt-BR')}${v.cancelada ? '<br><b>*** VENDA CANCELADA ***</b>' : ''}</div>`}
+    ${!fiscal ? '' : `NFC-e nº ${v.nfce} · Série 001<br>${new Date(v.data).toLocaleString('pt-BR')}${v.cancelada ? '<br><b>*** NFC-e CANCELADA ***</b>' : ''}
+    <div class="qr-real">${qrSvg('https://www.nfce.fazenda.sp.gov.br/qrcode?p=' + chave + '|2|2|1|SIMULACAO', 3)}</div>Consulte pela chave de acesso em<br>nfce.fazenda.sp.gov.br/consulta<br><span style="font-size:9.5px;word-break:break-all">${chave.replace(/(\d{4})/g, '$1 ')}</span></div>`}
     ${c.rodape ? `<hr><div class="c">${esc(c.rodape)}</div>` : ''}
   </div>`;
 }
 function mostrarCupom(v, nova) {
   abrirModal(`<div class="modal-head"><span class="ico-chip ${v.cancelada ? 'bad' : 'ok'}">${ic(v.cancelada ? 'ban' : 'circle-check', 'lg')}</span><div><h2>${nova ? 'Venda concluída' : 'Venda #' + v.id}</h2><p>${brl(v.total)} · ${(v.pagamentos || []).map(p => p.forma).join(' + ')}${v.troco ? ` · troco de <b>${brl(v.troco)}</b>` : ''}${nova ? '. Estoque atualizado.' : ''}</p></div></div>
   ${htmlCupom(v)}
-  <p class="muted" style="text-align:center;font-size:12px;margin:14px 0 0">${ic('info', 'sm')} Nota simulada. No sistema real ela é autorizada pela SEFAZ-SP.</p>
+  <p class="muted" style="text-align:center;font-size:12px;margin:14px 0 0">${ic('info', 'sm')} ${v.nfce ? 'Nota simulada. No sistema real ela é autorizada pela SEFAZ-SP.' : 'Venda sem NFC-e: comprovante sem valor fiscal.'}</p>
   <div class="acoes"><button class="btn sec" onclick="toast('Comprovante enviado por WhatsApp (simulação)')">${ic('message-circle', 'sm')}WhatsApp</button><button class="btn sec" onclick="imprimirCupom(${v.id})">${ic('printer', 'sm')}${nova ? 'Imprimir' : 'Reimprimir'}</button><button class="btn" onclick="fecharModal()">${ic(nova ? 'plus' : 'check', 'sm')}${nova ? 'Nova venda' : 'Fechar'}</button></div>`);
 }
 function imprimirCupom(id) { imprimirHtml(htmlCupom(S.vendas.find(x => x.id === id))); }

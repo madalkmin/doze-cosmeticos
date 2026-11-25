@@ -56,7 +56,7 @@ TELAS.vendas = () => {
 function verVenda(id) {
   const v = S.vendas.find(x => x.id === id), cli = S.clientes.find(c => c.id === v.cliente);
   const sub = v.itens.reduce((s, i) => s + i.preco * i.qtd, 0);
-  abrirModal(`<div class="modal-head"><span class="ico-chip ${v.cancelada ? 'bad' : 'ok'}">${ic(v.cancelada ? 'ban' : 'receipt', 'lg')}</span><div><h2>Venda #${v.id}</h2><p>${dataHora(v.data)} · ${esc(v.vendedor)}${cli ? ' · ' + esc(cli.nome) : ''} · NFC-e ${v.nfce}</p></div></div>
+  abrirModal(`<div class="modal-head"><span class="ico-chip ${v.cancelada ? 'bad' : 'ok'}">${ic(v.cancelada ? 'ban' : 'receipt', 'lg')}</span><div><h2>Venda #${v.id}</h2><p>${dataHora(v.data)} · ${esc(v.vendedor)}${cli ? ' · ' + esc(cli.nome) : ''} · ${v.nfce ? 'NFC-e ' + v.nfce : 'sem NFC-e'}</p></div></div>
   ${v.cancelada ? `<div class="aviso bad">${ic('ban', 'sm')}<span>Cancelada em ${dataHora(v.cancelada.data)} por ${esc(v.cancelada.usuario)}: “${esc(v.cancelada.motivo)}”. Itens devolvidos ao estoque e NFC-e cancelada na SEFAZ.</span></div>` : ''}
   <table><thead><tr><th>Produto</th><th class="num">Qtd</th><th class="num">Unit.</th><th class="num">Total</th></tr></thead><tbody>${v.itens.map(i => `<tr><td>${esc(i.nome)}</td><td class="num">${i.qtd}</td><td class="num">${brl(i.preco)}</td><td class="num">${brl(i.preco * i.qtd)}</td></tr>`).join('')}</tbody></table>
   <div style="margin-top:12px">
@@ -69,8 +69,8 @@ function verVenda(id) {
 function cancelarVendaFeita(id) {
   const v = S.vendas.find(x => x.id === id);
   const min = (Date.now() - new Date(v.data)) / 6e4;
-  abrirModal(`<div class="modal-head"><span class="ico-chip bad">${ic('ban', 'lg')}</span><div><h2>Cancelar venda #${v.id}?</h2><p>Os itens voltam para o estoque e a NFC-e é cancelada na SEFAZ.</p></div></div>
-  ${min > 30 ? `<div class="aviso warn">${ic('triangle-alert', 'sm')}<span>Esta venda tem mais de 30 minutos. Em SP o cancelamento da NFC-e é limitado a esse prazo; depois disso o caminho é uma nota de devolução (o contador orienta).</span></div>` : ''}
+  abrirModal(`<div class="modal-head"><span class="ico-chip bad">${ic('ban', 'lg')}</span><div><h2>Cancelar venda #${v.id}?</h2><p>Os itens voltam para o estoque${v.nfce ? ' e a NFC-e é cancelada na SEFAZ' : ''}.</p></div></div>
+  ${v.nfce && min > 30 ? `<div class="aviso warn">${ic('triangle-alert', 'sm')}<span>Esta venda tem mais de 30 minutos. Em SP o cancelamento da NFC-e é limitado a esse prazo; depois disso o caminho é uma nota de devolução (o contador orienta).</span></div>` : ''}
   <label class="field">Motivo do cancelamento<input id="motCanc" placeholder="Ex.: cliente desistiu, produto errado" required></label>
   <div class="acoes"><button class="btn sec" onclick="verVenda(${id})">Voltar</button><button class="btn danger" onclick="confirmarCancelamento(${id})">${ic('ban', 'sm')}Confirmar cancelamento</button></div>`, true);
   setTimeout(() => $('#motCanc').focus(), 50);

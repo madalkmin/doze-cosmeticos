@@ -65,8 +65,15 @@ function atualizarOnline() { const c = $('#chipOffline'); if (c) c.classList.tog
 addEventListener('online', () => { atualizarOnline(); toast('Internet de volta'); });
 addEventListener('offline', () => { atualizarOnline(); toast('Sem internet. As vendas continuam e a nota é enviada quando voltar (contingência).', true); });
 
-// ----- Busca geral (Ctrl+K) -----
-let BUSCA = null;
+// ----- Busca geral: campo no topo com resultados logo abaixo (Ctrl+K foca) -----
+let BUSCA = { sel: 0, itens: [] };
+function htmlBusca() {
+  return `<div class="busca" id="busca">${ic('search', 'sm')}
+    <input id="buscaIn" type="search" placeholder="Buscar produto, cliente, venda…" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="buscaLista" aria-autocomplete="list" aria-label="Buscar produto, código de barras, cliente, venda ou ação">
+    <kbd class="busca-kbd" aria-hidden="true">Ctrl K</kbd>
+    <div class="busca-drop" id="buscaDrop" hidden><div class="busca-lista" id="buscaLista" role="listbox" aria-label="Resultados"></div>
+      <div class="busca-rodape" aria-hidden="true"><span><kbd>↑</kbd><kbd>↓</kbd> navegar</span><span><kbd>Enter</kbd> abrir</span><span><kbd>Esc</kbd> fechar</span></div></div></div>`;
+}
 function acoesBusca() {
   const a = [
     ['scan-barcode', 'Nova venda', 'Abrir o caixa (PDV)', "location.hash='caixa'", 'caixa'],
@@ -79,31 +86,18 @@ function acoesBusca() {
   const telas = Object.entries(ROTAS).filter(([r]) => pode(r)).map(([r, [i, n]]) => [i, n, 'Ir para a tela', `location.hash='${r}'`]);
   return { a, telas };
 }
-function abrirBusca() {
-  if (BUSCA) return;
-  BUSCA = { sel: 0, itens: [], volta: document.activeElement };
-  document.body.insertAdjacentHTML('beforeend', `<div class="cmdk" id="cmdk" role="dialog" aria-modal="true" aria-label="Busca geral"><div class="cmdk-box">
-    <div class="cmdk-campo">${ic('search')}<input id="cmdkIn" placeholder="Produto, código de barras, cliente, venda (#1234) ou ação" autocomplete="off" role="combobox" aria-expanded="true" aria-controls="cmdkLista" aria-autocomplete="list"><kbd>Esc</kbd></div>
-    <div class="cmdk-lista" id="cmdkLista" role="listbox"></div>
-    <div class="cmdk-rodape"><span><kbd>↑</kbd><kbd>↓</kbd> navegar</span><span><kbd>Enter</kbd> abrir</span><span><kbd>Esc</kbd> fechar</span></div></div></div>`);
-  const inp = $('#cmdkIn');
-  inp.addEventListener('input', () => { BUSCA.sel = 0; desenharBusca(); });
-  inp.addEventListener('keydown', e => {
-    e.stopPropagation(); // não deixa o leitor de código de barras do caixa pegar estas teclas
-    if (e.key === 'ArrowDown') { e.preventDefault(); BUSCA.sel = Math.min(BUSCA.itens.length - 1, BUSCA.sel + 1); marcarBusca(); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); BUSCA.sel = Math.max(0, BUSCA.sel - 1); marcarBusca(); }
-    else if (e.key === 'Enter') { e.preventDefault(); executarBusca(BUSCA.sel); }
-    else if (e.key === 'Escape') { e.preventDefault(); fecharBusca(); }
-  });
-  $('#cmdk').addEventListener('mousedown', e => { if (e.target.id === 'cmdk') fecharBusca(); });
-  desenharBusca(); inp.focus();
+function abrirBusca() { const i = $('#buscaIn'); if (i) { i.focus(); i.select(); } }
+function mostrarBusca(sim) {
+  const d = $('#buscaDrop'), i = $('#buscaIn'); if (!d) return;
+  d.hidden = !sim; i.setAttribute('aria-expanded', sim); $('#busca').classList.toggle('aberta', sim);
 }
-function fecharBusca() { const c = $('#cmdk'); if (c) c.remove(); const v = BUSCA && BUSCA.volta; BUSCA = null; if (v && v.focus) v.focus(); }
+function fecharBusca(limpar) { const i = $('#buscaIn'); if (!i) return; mostrarBusca(false); if (limpar) i.value = ''; }
 function desenharBusca() {
-  const t = $('#cmdkIn').value.trim().toLowerCase(), norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(), tn = norm(t);
+  const inp = $('#buscaIn'); if (!inp) return;
+  const t = inp.value.trim().toLowerCase(), norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(), tn = norm(t);
   const { a, telas } = acoesBusca(), grupos = [];
   const casa = (...c) => c.some(x => norm(x).includes(tn));
-  if (!t) { grupos.push(['Ações rápidas', a.map(x => ({ i: x[0], t: x[1], s: x[2], run: x[3] }))]); }
+  if (!t) grupos.push(['Ações rápidas', a.map(x => ({ i: x[0], t: x[1], s: x[2], run: x[3] }))]);
   else {
     const prods = S.produtos.filter(p => p.ean === t || casa(p.nome, p.marca, p.variacao, p.sku, p.ean)).slice(0, 6);
     if (prods.length) grupos.push(['Produtos', prods.map(p => ({ thumb: p.categoria, t: p.nome + (p.variacao ? ' · ' + p.variacao : ''), s: `${p.marca} · ${brl(p.preco)} · ${p.estoque} em estoque`, run: location.hash === '#caixa' ? `bipar('${p.ean}')` : pode('produtos') ? `location.hash='produtos';setTimeout(()=>formProduto(${p.id}),60)` : `toast('${esc(p.nome).replace(/'/g, '')}: ${p.estoque} em estoque, ${brl(p.preco)}')`, dica: location.hash === '#caixa' ? 'Adicionar à venda' : '' }))]);
@@ -114,20 +108,38 @@ function desenharBusca() {
     if (ac.length) grupos.push(['Ações e telas', ac]);
   }
   BUSCA.itens = grupos.flatMap(g => g[1]);
+  BUSCA.sel = Math.min(BUSCA.sel, Math.max(0, BUSCA.itens.length - 1));
   let k = 0;
-  $('#cmdkLista').innerHTML = BUSCA.itens.length ? grupos.map(([nome, its]) => `<div class="cmdk-grupo" role="presentation">${nome}</div>${its.map(x => { const id = k++; return `<div class="cmdk-it" role="option" id="ck${id}" data-k="${id}" aria-selected="${id === BUSCA.sel}">${x.thumb ? thumb(x.thumb, true) : x.av ? `<span class="avatar sm">${iniciais(x.av)}</span>` : `<span class="ico-chip sm">${ic(x.i, 'sm')}</span>`}<span class="tx"><b>${esc(x.t)}</b><small>${esc(x.s)}</small></span>${x.dica ? `<small class="cmdk-dica">${x.dica}</small>` : ''}</div>`; }).join('')}`).join('')
-    : `<div class="empty" style="padding:28px 10px"><b>Nada encontrado</b>Tente o nome, a marca ou o código de barras.</div>`;
-  $('#cmdkLista').querySelectorAll('.cmdk-it').forEach(el => { el.addEventListener('mousemove', () => { if (BUSCA.sel !== +el.dataset.k) { BUSCA.sel = +el.dataset.k; marcarBusca(); } }); el.addEventListener('click', () => executarBusca(+el.dataset.k)); });
-  marcarBusca();
+  $('#buscaLista').innerHTML = BUSCA.itens.length ? grupos.map(([nome, its]) => `<div class="cmdk-grupo" role="presentation">${nome}</div>${its.map(x => { const id = k++; return `<div class="cmdk-it" role="option" id="ck${id}" data-k="${id}" aria-selected="${id === BUSCA.sel}">${x.thumb ? thumb(x.thumb, true) : x.av ? `<span class="avatar sm">${iniciais(x.av)}</span>` : `<span class="ico-chip sm">${ic(x.i, 'sm')}</span>`}<span class="tx"><b>${esc(x.t)}</b><small>${esc(x.s)}</small></span>${x.dica ? `<small class="cmdk-dica">${x.dica}</small>` : ''}</div>`; }).join('')}`).join('')
+    : `<div class="busca-vazio"><b>Nada encontrado para “${esc(inp.value.trim())}”</b>Tente o nome, a marca ou o código de barras.</div>`;
+  mostrarBusca(true); marcarBusca();
 }
 function marcarBusca() {
-  document.querySelectorAll('.cmdk-it').forEach(el => el.setAttribute('aria-selected', +el.dataset.k === BUSCA.sel));
-  const s = $('#ck' + BUSCA.sel); if (s) { s.scrollIntoView({ block: 'nearest' }); $('#cmdkIn').setAttribute('aria-activedescendant', s.id); }
+  document.querySelectorAll('#buscaLista .cmdk-it').forEach(el => el.setAttribute('aria-selected', +el.dataset.k === BUSCA.sel));
+  const s = $('#ck' + BUSCA.sel), i = $('#buscaIn'); if (s) { s.scrollIntoView({ block: 'nearest' }); i.setAttribute('aria-activedescendant', s.id); } else i && i.removeAttribute('aria-activedescendant');
 }
-function executarBusca(k) { const x = BUSCA && BUSCA.itens[k]; if (!x) return; fecharBusca(); new Function(x.run)(); }
+function executarBusca(k) { const x = BUSCA.itens[k]; if (!x) return; fecharBusca(true); $('#buscaIn').blur(); new Function(x.run)(); }
+// Eventos delegados: a barra do topo é redesenhada a cada troca de tela
+document.addEventListener('focusin', e => { if (e.target.id === 'buscaIn') { BUSCA.sel = 0; desenharBusca(); } });
+document.addEventListener('input', e => { if (e.target.id === 'buscaIn') { BUSCA.sel = 0; desenharBusca(); } });
+document.addEventListener('keydown', e => {
+  if (e.target.id !== 'buscaIn') return;
+  e.stopPropagation(); // não deixa o leitor de código de barras do caixa pegar estas teclas
+  if (e.key === 'ArrowDown') { e.preventDefault(); BUSCA.sel = Math.min(BUSCA.itens.length - 1, BUSCA.sel + 1); marcarBusca(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); BUSCA.sel = Math.max(0, BUSCA.sel - 1); marcarBusca(); }
+  else if (e.key === 'Enter') { e.preventDefault(); executarBusca(BUSCA.sel); }
+  else if (e.key === 'Escape') { e.preventDefault(); if (e.target.value) { e.target.value = ''; BUSCA.sel = 0; desenharBusca(); } else { fecharBusca(); e.target.blur(); } }
+  else if (e.key === 'Tab') fecharBusca();
+}, true); // fase de captura: chega antes dos atalhos do caixa
+document.addEventListener('mousedown', e => {
+  const it = e.target.closest && e.target.closest('#buscaLista .cmdk-it');
+  if (it) { e.preventDefault(); executarBusca(+it.dataset.k); return; }
+  if (!e.target.closest || !e.target.closest('#busca')) fecharBusca();
+});
+document.addEventListener('mousemove', e => { const it = e.target.closest && e.target.closest('#buscaLista .cmdk-it'); if (it && BUSCA.sel !== +it.dataset.k) { BUSCA.sel = +it.dataset.k; marcarBusca(); } });
 document.addEventListener('keydown', e => {
   if (!S.usuario) return;
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); BUSCA ? fecharBusca() : abrirBusca(); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); abrirBusca(); }
   if (e.key === 'Escape' && $('#painelSino')) fecharSino();
   if (e.key === 'Escape' && document.body.classList.contains('menu-aberto')) menuMobile(false);
 }, true);

@@ -171,7 +171,7 @@ function render() {
   $('#menu').innerHTML = grupos.map(g => { const it = g.itens.filter(m => pode(m[0])); return it.length ? `<div class="nav-sec">${g.t}</div>` + it.map(m => `<a href="#${m[0]}" class="${m[0] === marcada ? 'ativo' : ''}" ${m[0] === marcada ? 'aria-current="page"' : ''} data-dica="${m[2]}">${ic(m[1])}<span class="rot">${m[2]}</span>${badge(m[0])}</a>`).join('') : ''; }).join('');
   $('#perfil').innerHTML = `<span class="avatar" aria-hidden="true">${iniciais(S.usuario.nome)}</span><div class="who"><b>${S.usuario.nome}</b><small>${perfil().nome}</small></div><button title="Trocar usuário" aria-label="Sair e trocar de usuário" onclick="sair()">${ic('log-out')}</button>`;
   $('#topbar').innerHTML = `<button class="icon-btn so-mobile" id="abrirMenu" aria-label="Abrir menu" onclick="menuMobile(true)">${ic('menu')}</button>
-    <button class="busca-btn" onclick="abrirBusca()" aria-label="Buscar produto, cliente ou venda (Ctrl+K)">${ic('search', 'sm')}<span>Buscar produto, cliente, venda…</span><kbd>Ctrl K</kbd></button>
+    ${htmlBusca()}
     <div class="sp"></div>
     <span class="chip offline hidden" id="chipOffline">${ic('wifi-off', 'sm')}Sem internet</span>
     ${htmlSino()}

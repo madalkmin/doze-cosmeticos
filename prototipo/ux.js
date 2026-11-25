@@ -171,7 +171,7 @@ function erroCampo(form, nome, msg) {
 function limparErro(el) { el.classList.remove('invalido'); el.removeAttribute('aria-invalid'); const lbl = el.closest('.field') || el.parentNode; lbl.querySelectorAll('.erro-campo').forEach(x => x.remove()); }
 // Regras simples de validação por formulário: [campo, teste, mensagem]
 const REGRAS = {
-  fp: [['ean', v => v.trim().length >= 8, 'Bipe ou digite o código de barras (8 dígitos ou mais)'], ['nome', v => v.trim(), 'Informe o nome do produto'], ['preco', v => num(v) > 0, 'Informe o preço de venda'],
+  fp: [['ean', v => v.trim().length >= 8, 'Bipe ou digite o código de barras (8 dígitos ou mais)'], ['nome', v => v.trim(), 'Informe o nome do produto'], ['marca', v => v.trim(), 'Informe a marca'], ['preco', v => num(v) > 0, 'Informe o preço de venda'],
     ['ean', (v, f) => !eanEmUso(v, +f.dataset.id), 'Já existe um produto com esse código de barras']],
   fc: [['nome', v => v.trim().length >= 3, 'Informe o nome completo'], ['cpf', v => !v || v.length === 14, 'CPF incompleto: são 11 números'], ['fone', v => !v || v.length >= 14, 'WhatsApp incompleto: DDD + número']],
   fcr: [['nome', v => v.trim().length >= 2, 'Informe o nome'], ['cpf', v => !v || v.length === 14, 'CPF incompleto: são 11 números'], ['fone', v => !v || v.length >= 14, 'WhatsApp incompleto: DDD + número']],
@@ -462,4 +462,42 @@ function avisarEanRepetido(inp, idAtual) {
   // setTimeout: roda depois do listener global que limpa erros a cada digitação
   inp.addEventListener('input', () => setTimeout(checar, 0)); inp.addEventListener('change', checar);
   if (inp.value) checar();
+}
+
+// Sugestões de valores já usados (marca, linha): ao digitar mostra a lista; escolher só preenche o texto.
+// Sem escolher, o texto digitado vale como está.
+function sugerirValores(inp, fonte, titulo) {
+  const caixa = document.createElement('div');
+  caixa.className = 'ac-lista'; caixa.setAttribute('role', 'listbox'); caixa.hidden = true;
+  inp.parentNode.classList.add('ac'); inp.parentNode.appendChild(caixa);
+  inp.setAttribute('autocomplete', 'off'); inp.setAttribute('aria-autocomplete', 'list');
+  let achados = [], ativo = -1;
+  const normal = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  const fechar = () => { caixa.hidden = true; ativo = -1; };
+  const desenhar = () => {
+    caixa.innerHTML = `<div class="ac-tit">${titulo}</div>` + achados.map(([v, n], k) => `<div class="dz-opt ${k === ativo ? 'ativo' : ''}" data-k="${k}" role="option"><span class="ac-nome"><b>${esc(v)}</b></span><small class="muted">${n} produto${n === 1 ? '' : 's'}</small></div>`).join('');
+    caixa.hidden = !achados.length;
+  };
+  const escolher = v => { inp.value = v; inp.dispatchEvent(new Event('change', { bubbles: true })); fechar(); };
+  const buscar = () => {
+    const t = normal(inp.value);
+    if (!t) { achados = []; return desenhar(); }
+    const cont = new Map();
+    fonte().forEach(v => { if (!v) return; const k = normal(v); const c = cont.get(k); if (c) c[1]++; else cont.set(k, [v, 1]); });
+    // produtos.map conta uso; os que vieram só da lista de marcas ficam com 1 a mais, então desconta
+    const uso = v => S.produtos.filter(p => normal(p.marca) === normal(v) || normal(p.linha || p.nome) === normal(v)).length;
+    achados = [...cont.entries()].filter(([k]) => k.includes(t) && k !== t).map(([, [v]]) => [v, uso(v)])
+      .sort((a, b) => (normal(a[0]).startsWith(t) ? 0 : 1) - (normal(b[0]).startsWith(t) ? 0 : 1) || b[1] - a[1]).slice(0, 8);
+    ativo = -1; desenhar();
+  };
+  inp.addEventListener('input', buscar);
+  inp.addEventListener('keydown', e => {
+    if (caixa.hidden) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); ativo = Math.min(achados.length - 1, ativo + 1); desenhar(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); ativo = Math.max(-1, ativo - 1); desenhar(); }
+    else if (e.key === 'Enter' && ativo >= 0) { e.preventDefault(); escolher(achados[ativo][0]); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fechar(); }
+  });
+  caixa.addEventListener('mousedown', e => { const el = e.target.closest('.dz-opt'); if (el) { e.preventDefault(); escolher(achados[+el.dataset.k][0]); } });
+  inp.addEventListener('blur', () => setTimeout(fechar, 100));
 }

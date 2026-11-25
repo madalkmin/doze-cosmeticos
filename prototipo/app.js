@@ -311,15 +311,15 @@ function importarPlanilha() {
 }
 function formProduto(id, eanNovo, baseId) {
   const base = baseId && S.produtos.find(x => x.id === baseId);
-  const p = id ? S.produtos.find(x => x.id === id) : base ? { ...base, ean: '', variacao: '', estoque: 0, sku: '', nome: base.linha || base.nome } : { ean: eanNovo || '', nome: '', categoria: CATEGORIAS[0], marca: MARCAS[0], variacao: '', custo: '', preco: '', estoque: 0, minimo: 3, validade: '', linha: '', sku: '' };
+  const p = id ? S.produtos.find(x => x.id === id) : base ? { ...base, ean: '', variacao: '', estoque: 0, sku: '', nome: base.linha || base.nome } : { ean: eanNovo || '', nome: '', categoria: CATEGORIAS[0], marca: '', variacao: '', custo: '', preco: '', estoque: 0, minimo: 3, validade: '', linha: '', sku: '' };
   abrirModal(`<div class="modal-head">${thumb(p.categoria)}<div><h2>${id ? 'Editar produto' : base ? 'Nova variação' : 'Novo produto'}</h2><p>${id ? esc(p.nome) : base ? 'Novo tom/cor de ' + esc(base.linha || base.nome) + '. Bipe a embalagem para o código.' : 'Bipe o produto para preencher o código'}</p></div></div>
   <form id="fp" class="form-grid" onsubmit="return false">
     <label class="field full">Código de barras<div class="input-ico">${ic('scan-barcode', 'sm')}<input name="ean" value="${p.ean}" required></div></label>
     <label class="field full">Nome do produto<span><input name="nome" value="${esc(p.nome)}" required placeholder="Ex.: Batom Matte Vermelho"></span></label>
     <label class="field">Categoria<select class="campo" name="categoria">${CATEGORIAS.map(c => `<option ${p.categoria === c ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
-    <label class="field">Marca<select class="campo" name="marca">${MARCAS.map(c => `<option ${p.marca === c ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
+    <label class="field">Marca<span><input name="marca" value="${esc(p.marca)}" required placeholder="Ex.: Ruby Rose"></span></label>
     <label class="field">Variação (cor, tom, tamanho)<input name="variacao" value="${esc(p.variacao)}" placeholder="Ex.: Nude, Bege 03"></label>
-    <label class="field">Linha (agrupa as variações)<input name="linha" value="${esc(p.linha || '')}" placeholder="Ex.: Batom Matte Ruby Rose"></label>
+    <label class="field">Linha (agrupa as variações)<span><input name="linha" value="${esc(p.linha || '')}" placeholder="Ex.: Batom Matte Ruby Rose"></span></label>
     <label class="field">SKU (código interno)<input name="sku" value="${esc(p.sku || '')}" placeholder="Gerado se vazio"></label>
     <label class="field">Validade<input name="validade" type="month" value="${p.validade}"></label>
     <div class="form-sec">Preço</div>
@@ -333,6 +333,8 @@ function formProduto(id, eanNovo, baseId) {
   <div class="acoes"><button class="btn sec" onclick="fecharModal()">Cancelar</button><button class="btn" onclick="salvarProduto(${id || 0})">${ic('check', 'sm')}Salvar produto</button></div>`);
   autocompletarNome($('#fp [name=nome]'), id || 0);
   avisarEanRepetido($('#fp [name=ean]'), id || 0);
+  sugerirValores($('#fp [name=marca]'), () => [...MARCAS, ...S.produtos.map(x => x.marca)], 'Marcas cadastradas');
+  sugerirValores($('#fp [name=linha]'), () => S.produtos.map(x => x.linha || x.nome), 'Linhas cadastradas');
   setTimeout(() => $('#fp [name=' + (base ? 'ean' : eanNovo || id ? 'nome' : 'ean') + ']').focus(), 60);
 }
 function salvarProduto(id) {
@@ -342,6 +344,10 @@ function salvarProduto(id) {
   const dup = eanEmUso(d.ean, id);
   if (dup) return toast(`Código já usado em: ${dup.nome}${dup.variacao ? ' · ' + dup.variacao : ''}`, true);
   d.custo = num(d.custo); d.preco = num(d.preco); d.minimo = +d.minimo || 0;
+  // marca digitada: usa a grafia já cadastrada se existir; se for nova, entra na lista de marcas
+  d.marca = d.marca.trim(); d.linha = d.linha.trim();
+  const mExist = MARCAS.find(m => m.toLowerCase() === d.marca.toLowerCase());
+  if (mExist) d.marca = mExist; else if (d.marca) MARCAS.push(d.marca);
   if (!d.linha) d.linha = d.nome;
   if (id) Object.assign(S.produtos.find(p => p.id === id), d);
   else { d.estoque = +d.estoque || 0; d.id = Math.max(...S.produtos.map(p => p.id)) + 1; d.sku = d.sku || 'DZ-' + String(d.id).padStart(4, '0'); S.produtos.push(d); if (d.estoque) registrarMov(d, 'Entrada', d.estoque, 'Estoque inicial'); }

@@ -148,6 +148,8 @@ document.addEventListener('keydown', e => {
 const MASCARAS = {
   cpf: v => v.replace(/\D/g, '').slice(0, 11).replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2'),
   cnpj: v => v.replace(/\D/g, '').slice(0, 14).replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1/$2').replace(/(\d{4})(\d)/, '$1-$2'),
+  // NCM (8 dígitos) + CFOP (4 dígitos): 0000.00.00 / 0000
+  ncmcfop: v => { const d = v.replace(/\D/g, '').slice(0, 12), n = d.slice(0, 8), c = d.slice(8); let r = n.slice(0, 4); if (n.length > 4) r += '.' + n.slice(4, 6); if (n.length > 6) r += '.' + n.slice(6); if (c) r += ' / ' + c; return r; },
   fone: v => { const d = v.replace(/\D/g, '').slice(0, 11); return d.length <= 2 ? d.replace(/^(\d+)/, '($1') : d.length <= 6 ? d.replace(/^(\d{2})(\d+)/, '($1) $2') : d.length <= 10 ? d.replace(/^(\d{2})(\d{4})(\d+)/, '($1) $2-$3') : d.replace(/^(\d{2})(\d{5})(\d+)/, '($1) $2-$3'); },
 };
 const TIPO_MASCARA = { cpf: 'cpf', cnpj: 'cnpj', fone: 'fone' };
@@ -171,7 +173,7 @@ function erroCampo(form, nome, msg) {
 function limparErro(el) { el.classList.remove('invalido'); el.removeAttribute('aria-invalid'); const lbl = el.closest('.field') || el.parentNode; lbl.querySelectorAll('.erro-campo').forEach(x => x.remove()); }
 // Regras simples de validação por formulário: [campo, teste, mensagem]
 const REGRAS = {
-  fp: [['ean', v => v.trim().length >= 8, 'Bipe ou digite o código de barras (8 dígitos ou mais)'], ['nome', v => v.trim(), 'Informe o nome do produto'], ['marca', v => v.trim(), 'Informe a marca'], ['preco', v => num(v) > 0, 'Informe o preço de venda'],
+  fp: [['ean', v => v.trim().length >= 8, 'Bipe ou digite o código de barras (8 dígitos ou mais)'], ['nome', v => v.trim(), 'Informe o nome do produto'], ['marca', v => v.trim(), 'Informe a marca'], ['fiscal', v => !v || v.replace(/\D/g, '').length === 12, 'NCM tem 8 números e CFOP tem 4'], ['preco', v => num(v) > 0, 'Informe o preço de venda'],
     ['ean', (v, f) => !eanEmUso(v, +f.dataset.id), 'Já existe um produto com esse código de barras']],
   fc: [['nome', v => v.trim().length >= 3, 'Informe o nome completo'], ['cpf', v => !v || v.length === 14, 'CPF incompleto: são 11 números'], ['fone', v => !v || v.length >= 14, 'WhatsApp incompleto: DDD + número']],
   fcr: [['nome', v => v.trim().length >= 2, 'Informe o nome'], ['cpf', v => !v || v.length === 14, 'CPF incompleto: são 11 números'], ['fone', v => !v || v.length >= 14, 'WhatsApp incompleto: DDD + número']],

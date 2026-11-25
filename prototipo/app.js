@@ -328,7 +328,7 @@ function formProduto(id, eanNovo, baseId) {
     <div class="form-sec">Estoque e fiscal</div>
     <label class="field">Estoque atual<input name="estoque" type="number" value="${p.estoque}" ${id ? 'disabled title="Ajuste pela tela de Estoque"' : ''}></label>
     <label class="field">Avisar quando chegar a<input name="minimo" type="number" value="${p.minimo}"></label>
-    <label class="field full">NCM / CFOP (nota fiscal)<input value="3304.10.00 / 5102"></label>
+    <label class="field full">NCM / CFOP (nota fiscal)<input name="fiscal" data-mascara="ncmcfop" inputmode="numeric" value="${esc(p.fiscal || '3304.10.00 / 5102')}" placeholder="0000.00.00 / 0000"></label>
   </form>
   <div class="acoes"><button class="btn sec" onclick="fecharModal()">Cancelar</button><button class="btn" onclick="salvarProduto(${id || 0})">${ic('check', 'sm')}Salvar produto</button></div>`);
   autocompletarNome($('#fp [name=nome]'), id || 0);

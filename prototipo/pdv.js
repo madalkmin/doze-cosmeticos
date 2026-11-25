@@ -3,18 +3,22 @@ TELAS.caixa = () => {
   const t = totais();
   const rapidos = ['7891350034567', '7899045600112', '7896090611009', '7898944770029', '7891033102345', '7891350500011', '3337875597388', '7896006299985'].map(e => S.produtos.find(p => p.ean === e));
   const ep = perfil().editarPreco;
+  const up = S.ultimoT && Date.now() - S.ultimoT < 2500 && S.produtos.find(p => p.id === S.ultimo);
+  const eco = up ? `<div class="scan-eco" role="status">${ic('circle-check', 'sm')}<b>${esc(up.nome)}</b>${up.variacao ? ` · ${esc(up.variacao)}` : ''}<span>${brl(up.preco)}</span></div>` : '<div class="scan-eco vazio" role="status"></div>';
   const barra = S.caixa
     ? `<div class="card caixa-bar"><span class="cb-info"><span class="pulso"></span><b>Caixa #${S.caixa.id} aberto</b><small class="muted">desde ${new Date(S.caixa.abertoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · ${esc(S.caixa.operador)}</small></span>
        <span class="cb-acoes"><button class="btn ghost" onclick="movimentoCaixa('suprimento')">${ic('arrow-down-circle', 'sm')}Suprimento</button><button class="btn ghost" onclick="movimentoCaixa('sangria')">${ic('arrow-up-circle', 'sm')}Sangria</button><a class="btn sec" href="#caixas">${ic('lock-keyhole', 'sm')}Fechar caixa</a></span></div>`
     : `<div class="card caixa-bar fechado"><span class="cb-info"><span class="pulso off"></span><b>Caixa fechado.</b><small class="muted">Abra o caixa com o fundo de troco para registrar vendas.</small></span><button class="btn" onclick="abrirCaixa()">${ic('lock-open', 'sm')}Abrir caixa</button></div>`;
   $('#tela').innerHTML = `
   ${head('Caixa', `Operadora: ${S.usuario.nome}`, S.carrinho.length ? `<button class="btn sec" onclick="cancelarVenda()">${ic('x', 'sm')}Cancelar venda</button>` : '')}
+  ${abasRota([['caixa', 'scan-barcode', 'Vender'], ['caixas', 'lock-keyhole', 'Abrir/fechar caixa']], 'caixa')}
   ${barra}
   <div class="caixa">
     <div>
       <div class="scan">${ic('scan-barcode', 'lg')}
         <input id="bipe" placeholder="Bipe o produto, ou digite nome ou código e Enter" autocomplete="off">
-        <span class="ready"><span class="dot"></span>Leitor pronto</span></div>
+        <span class="ready"><span class="status-dot ok" aria-hidden="true"></span>Leitor pronto</span></div>
+      ${eco}
       <div class="card flush">
         <div class="card-head" style="padding-bottom:14px"><h3>${ic('shopping-bag', 'sm')}Itens da venda</h3><span class="pill rose plain">${t.itens} ${t.itens === 1 ? 'item' : 'itens'}</span></div>
         ${S.carrinho.length ? `<div class="tbl-wrap"><table><thead><tr><th>Produto</th><th class="num">Unitário</th><th style="text-align:center">Qtd</th><th class="num">Total</th><th></th></tr></thead><tbody>
@@ -44,7 +48,7 @@ TELAS.caixa = () => {
         </div>
         <button class="btn xl" onclick="finalizarVenda()" ${S.carrinho.length && S.caixa ? '' : 'disabled'}>${ic('receipt')}Finalizar venda <kbd class="kbd-btn">F2</kbd></button>
         ${!S.caixa ? `<small class="muted" style="text-align:center">Abra o caixa para finalizar vendas.</small>` : ''}
-        <div class="keys"><span><kbd>Enter</kbd> adicionar</span><span><kbd>F2</kbd> finalizar</span><span><kbd>F4</kbd> cliente</span><span><kbd>Esc</kbd> cancelar</span></div>
+        <div class="keys" aria-label="Atalhos do teclado"><span><kbd>Enter</kbd> adicionar</span><span><kbd>F2</kbd> finalizar</span><span><kbd>F3</kbd> buscar produto</span><span><kbd>F4</kbd> cliente</span><span><kbd>Esc</kbd> cancelar</span></div>
       </div>
     </div>
   </div>`;
@@ -57,7 +61,12 @@ TELAS.caixa = () => {
 function mudaQtd(k, d) {
   const i = S.carrinho[k], p = S.produtos.find(x => x.id === i.id);
   if (d > 0 && i.qtd + 1 > p.estoque) return toast('Estoque insuficiente', true);
-  i.qtd += d; if (i.qtd <= 0) S.carrinho.splice(k, 1);
+  const antes = i.qtd;
+  i.qtd += d;
+  if (i.qtd <= 0) {
+    S.carrinho.splice(k, 1); i.qtd = antes;
+    toast(`Removido: ${i.nome}`, false, () => { S.carrinho.splice(Math.min(k, S.carrinho.length), 0, i); if (location.hash === '#caixa') TELAS.caixa(); });
+  }
   TELAS.caixa();
 }
 function mudaPreco(k, v) { S.carrinho[k].preco = Math.max(0, +v || 0); TELAS.caixa(); toast('Preço alterado só nesta venda'); }
@@ -234,6 +243,7 @@ TELAS.caixas = () => {
   const dt = d => new Date(d).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
   $('#tela').innerHTML = `
   ${head('Abrir e fechar caixa', 'Fundo de troco, sangria, suprimento e conferência no fechamento')}
+  ${abasRota([['caixa', 'scan-barcode', 'Vender'], ['caixas', 'lock-keyhole', 'Abrir/fechar caixa']], 'caixas')}
   ${!c ? `<div class="card empty"><div class="ring">${ic('wallet', 'xl')}</div><b>Seu caixa está fechado</b>Abra o caixa informando o fundo de troco para começar a vender.<div style="margin-top:16px"><button class="btn" onclick="abrirCaixa()">${ic('lock-open', 'sm')}Abrir caixa</button></div></div>`
   : `<div class="card caixa-bar"><span class="cb-info"><span class="pulso"></span><b>Caixa #${c.id} aberto</b><small class="muted">desde ${dt(c.abertoEm)} · ${esc(c.operador)}</small></span>
       <span class="cb-acoes"><button class="btn sec" onclick="movimentoCaixa('suprimento')">${ic('arrow-down-circle', 'sm')}Suprimento</button><button class="btn sec" onclick="movimentoCaixa('sangria')">${ic('arrow-up-circle', 'sm')}Sangria</button><button class="btn" onclick="fecharCaixa()">${ic('lock-keyhole', 'sm')}Fechar caixa</button></span></div>

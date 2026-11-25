@@ -1,0 +1,17 @@
+{
+  "name": "Doze Cosméticos · Gestão",
+  "short_name": "Doze",
+  "description": "Caixa, estoque, clientes e financeiro da Doze Cosméticos",
+  "lang": "pt-BR",
+  "start_url": "./#caixa",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f8f1ee",
+  "theme_color": "#7d3150",
+  "icons": [
+    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "selo.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

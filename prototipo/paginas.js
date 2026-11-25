@@ -26,7 +26,8 @@ function salvarAjuste(id) {
 }
 
 // ===== VENDAS =====
-let filtroV = { periodo: '7', forma: '', status: '', busca: '' };
+let filtroV = { periodo: '7', forma: '', status: '', busca: '' }, limiteV = 50;
+const abasCompras = sel => abasRota([['compras', 'shopping-cart', 'Compras'], ['fornecedores', 'truck', 'Fornecedores']], sel);
 TELAS.vendas = () => {
   const ini = new Date(); ini.setHours(0, 0, 0, 0); ini.setDate(ini.getDate() - (+filtroV.periodo - 1));
   const souVend = S.usuario.perfil === 'vendedora';
@@ -45,9 +46,9 @@ TELAS.vendas = () => {
       <select class="campo" id="vStatus"><option value="">Todas</option><option value="concluida" ${filtroV.status === 'concluida' ? 'selected' : ''}>Concluídas</option><option value="cancelada" ${filtroV.status === 'cancelada' ? 'selected' : ''}>Canceladas</option></select>
     </div>
     <div class="tbl-wrap">${lista.length ? `<table><thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Itens</th><th>Pagamento</th><th>Vendedora</th><th class="num">Total</th><th>Status</th><th></th></tr></thead><tbody>
-    ${lista.slice(0, 200).map(v => `<tr class="${v.cancelada ? 'riscada' : ''}"><td><b>#${v.id}</b></td><td class="muted">${dataHora(v.data)}</td><td>${esc(S.clientes.find(c => c.id === v.cliente)?.nome || '—')}</td><td>${v.itens.reduce((s, i) => s + i.qtd, 0)}</td><td>${v.pagamentos.map(p => p.forma).join(' + ')}</td><td>${esc(v.vendedor)}</td><td class="num"><b>${brl(v.total)}</b></td>
+    ${lista.slice(0, limiteV).map(v => `<tr class="${v.cancelada ? 'riscada' : ''}"><td><b>#${v.id}</b></td><td class="muted">${dataHora(v.data)}</td><td>${esc(S.clientes.find(c => c.id === v.cliente)?.nome || '—')}</td><td>${v.itens.reduce((s, i) => s + i.qtd, 0)}</td><td>${v.pagamentos.map(p => p.forma).join(' + ')}</td><td>${esc(v.vendedor)}</td><td class="num"><b>${brl(v.total)}</b></td>
       <td>${v.cancelada ? '<span class="pill bad">Cancelada</span>' : '<span class="pill ok">Concluída</span>'}</td><td><div class="row-actions"><button class="icon-btn" title="Detalhes" onclick="verVenda(${v.id})">${ic('eye', 'sm')}</button><button class="icon-btn" title="Reimprimir cupom" onclick="imprimirCupom(${v.id})">${ic('printer', 'sm')}</button></div></td></tr>`).join('')}
-    </tbody></table>${lista.length > 200 ? `<p class="muted" style="padding:12px 20px">Mostrando as 200 mais recentes.</p>` : ''}` : `<div class="empty"><div class="ring">${ic('receipt', 'xl')}</div><b>Nenhuma venda</b>Mude o período ou os filtros.</div>`}</div>
+    </tbody></table>${lista.length > limiteV ? `<div class="mais"><button class="btn sec" onclick="limiteV+=50;TELAS.vendas()">Carregar mais ${Math.min(50, lista.length - limiteV)}</button><small class="muted">Mostrando ${limiteV} de ${lista.length}</small></div>` : ''}` : `<div class="empty"><div class="ring">${ic('receipt', 'xl')}</div><b>Nenhuma venda encontrada</b>Nenhuma venda nesse período ou com esses filtros.<div class="empty-acoes"><button class="btn sec" onclick="filtroV={periodo:'30',forma:'',status:'',busca:''};TELAS.vendas()">${ic('x', 'sm')}Limpar filtros</button><a class="btn" href="#caixa">${ic('scan-barcode', 'sm')}Ir para o caixa</a></div></div>`}</div>
   </div>`;
   $('#vBusca').addEventListener('input', e => { filtroV.busca = e.target.value; clearTimeout(window._vb); window._vb = setTimeout(() => { TELAS.vendas(); const i = $('#vBusca'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 250); });
   [['#vPer', 'periodo'], ['#vForma', 'forma'], ['#vStatus', 'status']].forEach(([s, k]) => $(s).addEventListener('change', e => { filtroV[k] = e.target.value; TELAS.vendas(); }));
@@ -90,14 +91,15 @@ TELAS.movimentacoes = () => {
   const lista = S.movs.filter(m => (!filtroM.tipo || m.tipo === filtroM.tipo) && (!filtroM.busca || (m.produto + ' ' + m.motivo).toLowerCase().includes(filtroM.busca.toLowerCase())));
   const cor = { Venda: 'rose', Entrada: 'ok', Compra: 'ok', Ajuste: 'warn', Cancelamento: 'bad' };
   $('#tela').innerHTML = `
-  ${head('Movimentações de estoque', 'Histórico de todas as entradas e saídas: quem, quando e por quê')}
+  ${head('Estoque', 'Histórico de todas as entradas e saídas: quem, quando e por quê')}
+  ${segEstoque('movs')}
   <div class="card flush">
-    <div class="toolbar"><div class="input-ico">${ic('search', 'sm')}<input id="mBusca" placeholder="Buscar produto ou motivo" value="${esc(filtroM.busca)}"></div>
+    <div class="toolbar"><div class="input-ico">${ic('search', 'sm')}<input id="mBusca" placeholder="Buscar produto ou motivo e Enter" aria-label="Buscar produto ou motivo" value="${esc(filtroM.busca)}"></div>
       <select class="campo" id="mTipo"><option value="">Todos os tipos</option>${tipos.map(t => `<option ${filtroM.tipo === t ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
     <div class="tbl-wrap">${lista.length ? `<table><thead><tr><th>Quando</th><th>Produto</th><th>Tipo</th><th>Motivo</th><th class="num">Qtd</th><th class="num">Saldo</th><th>Por</th></tr></thead><tbody>
       ${lista.slice(0, limiteM).map(m => `<tr><td class="muted">${dataHora(m.data)}</td><td><div class="prod" style="min-width:0">${thumb(m.categoria, true)}<b>${esc(m.produto)}</b></div></td><td><span class="pill plain ${cor[m.tipo] || ''}">${m.tipo}</span></td><td>${esc(m.motivo) || '—'}</td><td class="num"><b style="color:${m.qtd < 0 ? 'var(--bad)' : 'var(--ok)'}">${m.qtd > 0 ? '+' : ''}${m.qtd}</b></td><td class="num">${m.saldo ?? '—'}</td><td>${esc(m.usuario)}</td></tr>`).join('')}
       </tbody></table>${lista.length > limiteM ? `<div style="text-align:center;padding:14px"><button class="btn sec" onclick="limiteM+=50;TELAS.movimentacoes()">Carregar mais</button></div>` : ''}`
-      : `<div class="empty"><div class="ring">${ic('history', 'xl')}</div><b>Sem movimentações</b>Vendas, compras e ajustes aparecem aqui.</div>`}</div>
+      : `<div class="empty"><div class="ring">${ic('history', 'xl')}</div><b>Sem movimentações</b>Vendas, compras e ajustes de estoque aparecem aqui com quem fez e por quê.${filtroM.tipo || filtroM.busca ? `<div class="empty-acoes"><button class="btn sec" onclick="filtroM={tipo:'',busca:''};TELAS.movimentacoes()">${ic('x', 'sm')}Limpar filtros</button></div>` : ''}</div>`}</div>
   </div>`;
   $('#mBusca').addEventListener('change', e => { filtroM.busca = e.target.value; TELAS.movimentacoes(); });
   $('#mTipo').addEventListener('change', e => { filtroM.tipo = e.target.value; TELAS.movimentacoes(); });
@@ -106,7 +108,8 @@ TELAS.movimentacoes = () => {
 // ===== FORNECEDORES =====
 TELAS.fornecedores = () => {
   $('#tela').innerHTML = `
-  ${head('Fornecedores', `${S.fornecedores.length} fornecedores`, `<button class="btn" onclick="formFornecedor()">${ic('plus', 'sm')}Novo fornecedor</button>`)}
+  ${head('Compras', `${S.fornecedores.length} fornecedores cadastrados`, `<button class="btn" onclick="formFornecedor()">${ic('plus', 'sm')}Novo fornecedor</button>`)}
+  ${abasCompras('fornecedores')}
   <div class="card flush tbl-wrap"><table><thead><tr><th>Fornecedor</th><th>CNPJ</th><th>Contato</th><th>Telefone</th><th class="num">Compras</th><th class="num">Total comprado</th><th></th></tr></thead><tbody>
   ${S.fornecedores.map(f => { const cs = S.compras.filter(c => c.fornecedor === f.id); return `<tr><td><div class="prod" style="min-width:0"><span class="ico-chip" style="width:34px;height:34px">${ic('truck', 'sm')}</span><span><b>${esc(f.nome)}</b><small>${esc(f.email || '')}</small></span></div></td><td class="code">${esc(f.cnpj)}</td><td>${esc(f.contato || '—')}</td><td>${esc(f.fone || '—')}</td><td class="num">${cs.length}</td><td class="num">${brl(cs.reduce((s, c) => s + c.total, 0))}</td><td><div class="row-actions"><button class="icon-btn" title="Editar" onclick="formFornecedor(${f.id})">${ic('pencil', 'sm')}</button></div></td></tr>`; }).join('')}
   </tbody></table></div>`;
@@ -129,9 +132,10 @@ TELAS.compras = () => {
   const lista = [...S.compras].sort((a, b) => b.data.localeCompare(a.data));
   $('#tela').innerHTML = `
   ${head('Compras', 'Entrada de mercadorias de fornecedores: soma no estoque e atualiza o custo', `<button class="btn" onclick="novaCompra()">${ic('plus', 'sm')}Nova compra</button>`)}
+  ${abasCompras('compras')}
   <div class="card flush tbl-wrap">${lista.length ? `<table><thead><tr><th>Nº</th><th>Data</th><th>Fornecedor</th><th>Nota</th><th class="num">Itens</th><th class="num">Total</th><th>Por</th><th></th></tr></thead><tbody>
   ${lista.map(c => `<tr><td><b>#${c.id}</b></td><td class="muted">${dataHora(c.data)}</td><td>${esc(S.fornecedores.find(f => f.id === c.fornecedor)?.nome || '—')}</td><td>${esc(c.nota || '—')}</td><td class="num">${c.itens.reduce((s, i) => s + i.qtd, 0)}</td><td class="num"><b>${brl(c.total)}</b></td><td>${esc(c.usuario)}</td><td><div class="row-actions"><button class="icon-btn" title="Detalhes" onclick="verCompra(${c.id})">${ic('eye', 'sm')}</button></div></td></tr>`).join('')}
-  </tbody></table>` : `<div class="empty"><div class="ring">${ic('shopping-cart', 'xl')}</div><b>Nenhuma compra registrada</b>Registre a chegada de mercadoria de um fornecedor.</div>`}</div>`;
+  </tbody></table>` : `<div class="empty"><div class="ring">${ic('shopping-cart', 'xl')}</div><b>Nenhuma compra registrada</b>Quando chegar mercadoria de um fornecedor, registre aqui: o estoque soma e o custo se atualiza.<div class="empty-acoes"><button class="btn" onclick="novaCompra()">${ic('plus', 'sm')}Registrar primeira compra</button></div></div>`}</div>`;
 };
 let NC = null;
 function novaCompra() { NC = { fornecedor: S.fornecedores[0]?.id || '', nota: '', itens: [], atualizarCusto: true, lancarConta: true, venc: '' }; desenharCompra(); }
@@ -250,15 +254,23 @@ TELAS.configuracoes = () => {
         <div class="form-sec">Cupom</div>
         <label class="field">Largura da impressora<select class="campo" name="largura"><option value="80" ${+c.largura === 80 ? 'selected' : ''}>80 mm</option><option value="58" ${+c.largura === 58 ? 'selected' : ''}>58 mm</option></select></label>
         <label class="field full">Mensagem no rodapé<input name="rodape" value="${esc(c.rodape)}"></label>
+        <div class="form-sec">Metas (aparecem no painel)</div>
+        <label class="field">Meta de faturamento do mês (R$)<input name="metaMes" type="number" step="0.01" min="0" value="${metaDoMes().toFixed(2)}"></label>
+        <label class="field">Meta mensal por vendedora (R$)<input name="metaVendedora" type="number" step="0.01" min="0" value="${metaDaVendedora().toFixed(2)}"></label>
       </form>
       <div class="acoes"><button class="btn" onclick="salvarConfig()">${ic('check', 'sm')}Salvar</button></div></div>
-    <div class="card"><div class="card-head"><h3>${ic('eye', 'sm')}Prévia do cupom</h3></div><div id="prevCupom"></div></div>
+    <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+      <div class="card"><div class="card-head"><h3>${ic('monitor-smartphone', 'sm')}Aplicativo no computador do caixa</h3></div>
+        <p class="muted" style="margin:0 0 14px">Instale o sistema como aplicativo: ganha ícone na área de trabalho, abre em tela cheia sem a barra do navegador e avisa quando a internet cai.</p>
+        <div id="pwaArea">${htmlInstalar()}</div></div>
+      <div class="card"><div class="card-head"><h3>${ic('eye', 'sm')}Prévia do cupom</h3></div><div id="prevCupom"></div></div>
+    </div>
   </div>`;
   prevCupom();
   $('#fcfg').addEventListener('input', () => { Object.assign(S.config, Object.fromEntries(new FormData($('#fcfg')))); prevCupom(); });
 };
 function prevCupom() { const v = vendasValidas().slice(-1)[0]; $('#prevCupom').innerHTML = v ? htmlCupom(v) : ''; }
-function salvarConfig() { Object.assign(S.config, Object.fromEntries(new FormData($('#fcfg')))); toast('Configurações salvas'); }
+function salvarConfig() { const d = Object.fromEntries(new FormData($('#fcfg'))); d.metaMes = +d.metaMes || 0; d.metaVendedora = +d.metaVendedora || 0; Object.assign(S.config, d); toast('Configurações salvas'); }
 
 // ===== LOGIN com e-mail, senha e aprovação =====
 let modoLogin = 'entrar';

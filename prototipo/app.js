@@ -43,7 +43,7 @@ const vendasValidas = () => S.vendas.filter(v => !v.cancelada);
     S.vendas.filter(v => v.data.slice(0, 10) === ini).forEach(v => v.caixa = c.id);
     c.esperado = esperadoDinheiro(c); c.contado = Math.round((c.esperado + dif) * 100) / 100; c.diferenca = Math.round((c.contado - c.esperado) * 100) / 100;
   });
-  const hoje = { id: 104, operador: 'Carla (Dona)', abertoEm: mk(0, 9), fundo: 200, movimentos: [], status: 'aberto' };
+  const hoje = { id: 104, operador: 'Carla (Dona)', abertoEm: new Date(Math.min(Date.now() - 20 * 6e4, +new Date(mk(0, 9)))).toISOString(), fundo: 200, movimentos: [], status: 'aberto' };
   S.caixas.push(hoje); S.caixa = hoje;
   S.vendas.filter(v => v.data.slice(0, 10) === hojeISO()).forEach(v => v.caixa = hoje.id);
 })();
@@ -56,26 +56,46 @@ function esperadoDinheiro(c) {
 const perfil = () => PERFIS[S.usuario.perfil];
 const pode = t => perfil().telas.includes(t);
 
+// Todas as telas (rota → ícone e nome). Algumas ficam como aba de outra tela.
+const ROTAS = {
+  painel: ['layout-dashboard', 'Painel'], caixa: ['scan-barcode', 'Caixa'], caixas: ['lock-keyhole', 'Abrir/fechar caixa'],
+  vendas: ['receipt', 'Vendas'], clientes: ['users', 'Clientes'],
+  produtos: ['package', 'Produtos'], estoque: ['boxes', 'Estoque'], movimentacoes: ['arrow-left-right', 'Movimentações'],
+  compras: ['shopping-cart', 'Compras'], fornecedores: ['truck', 'Fornecedores'],
+  financeiro: ['wallet', 'Financeiro'], relatorios: ['chart-pie', 'Relatórios'], usuarios: ['shield-check', 'Usuários'], configuracoes: ['settings', 'Configurações'],
+};
+// Telas que aparecem como aba dentro de outra (o menu marca a "mãe")
+const ROTA_MAE = { caixas: 'caixa', movimentacoes: 'estoque', fornecedores: 'compras' };
 const MENU = [
-  ['§', 'Operação'],
-  ['painel', 'layout-dashboard', 'Painel'], ['caixa', 'scan-barcode', 'Caixa (PDV)'], ['caixas', 'lock-keyhole', 'Abrir/fechar caixa'],
-  ['vendas', 'receipt', 'Vendas'], ['clientes', 'users', 'Clientes'],
-  ['§', 'Estoque'],
-  ['produtos', 'package', 'Produtos'], ['estoque', 'boxes', 'Estoque'], ['movimentacoes', 'arrow-left-right', 'Movimentações'],
-  ['compras', 'shopping-cart', 'Compras'], ['fornecedores', 'truck', 'Fornecedores'],
-  ['§', 'Gestão'],
-  ['financeiro', 'wallet', 'Financeiro'], ['relatorios', 'chart-pie', 'Relatórios'], ['usuarios', 'shield-check', 'Usuários'], ['configuracoes', 'settings', 'Configurações'],
-];
+  ['§', 'Operação'], 'painel', 'caixa', 'vendas', 'clientes',
+  ['§', 'Estoque'], 'produtos', 'estoque', 'compras',
+  ['§', 'Gestão'], 'financeiro', 'relatorios', 'usuarios', 'configuracoes',
+].map(m => Array.isArray(m) ? m : [m, ...ROTAS[m]]);
+// Abas que ligam telas irmãs (ex.: Compras | Fornecedores)
+function abasRota(lista, atual) {
+  const it = lista.filter(([r]) => pode(r));
+  return it.length > 1 ? `<nav class="seg" aria-label="Seções">${it.map(([r, i, n]) => `<a href="#${r}" class="${r === atual ? 'sel' : ''}" ${r === atual ? 'aria-current="page"' : ''}>${ic(i, 'sm')}${n}</a>`).join('')}</nav>` : '';
+}
 const PAGAMENTOS = [['Pix', 'qr-code'], ['Crédito', 'credit-card'], ['Débito', 'wallet-cards'], ['Dinheiro', 'banknote']];
 // registra uma movimentação de estoque
 function registrarMov(p, tipo, qtd, motivo = '') { S.movs.unshift({ data: new Date().toISOString(), produto: p.nome, produtoId: p.id, categoria: p.categoria, tipo, qtd, motivo, usuario: S.usuario.nome, saldo: p.estoque }); }
 
-function toast(msg, erro) {
+// Aviso no canto. Com `desfazer`, mostra o botão "Desfazer" por alguns segundos.
+function toast(msg, erro, desfazer) {
   const t = document.createElement('div');
   t.className = 'toast' + (erro ? ' erro' : '');
+  t.setAttribute('role', erro ? 'alert' : 'status');
   t.innerHTML = ic(erro ? 'circle-alert' : 'circle-check') + `<span>${esc(msg)}</span>`;
+  if (desfazer) {
+    const b = document.createElement('button');
+    b.className = 'toast-acao'; b.type = 'button'; b.innerHTML = ic('undo-2', 'sm') + 'Desfazer';
+    b.onclick = () => { desfazer(); remover(); };
+    t.appendChild(b);
+  }
   $('#toasts').appendChild(t);
-  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 300); }, 2600);
+  let fora = false;
+  const remover = () => { if (fora) return; fora = true; t.classList.add('out'); setTimeout(() => t.remove(), 300); };
+  setTimeout(remover, desfazer ? 6000 : 2600);
 }
 let audio;
 function beep(ok = true) {
@@ -131,7 +151,7 @@ function telaLogin() {
 function entrar(id) {
   S.usuario = USUARIOS.find(u => u.id === id);
   $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
-  location.hash = pode('painel') ? 'painel' : 'caixa';
+  location.hash = S.usuario.perfil === 'vendedora' ? 'caixa' : 'painel';
   render();
   toast(`Olá, ${S.usuario.nome.split(' ')[0]}!`);
 }
@@ -145,14 +165,21 @@ function render() {
   if (!pode(rota)) { rota = perfil().telas[0]; history.replaceState(null, '', '#' + rota); }
   const baixos = S.produtos.filter(p => p.estoque <= p.minimo).length;
   const pend = USUARIOS.filter(u => u.status === 'pendente').length;
+  const marcada = ROTA_MAE[rota] || rota;
   const grupos = []; MENU.forEach(m => m[0] === '§' ? grupos.push({ t: m[1], itens: [] }) : grupos[grupos.length - 1].itens.push(m));
-  $('#menu').innerHTML = grupos.map(g => { const it = g.itens.filter(m => pode(m[0])); return it.length ? `<div class="nav-sec">${g.t}</div>` + it.map(m => `<a href="#${m[0]}" class="${m[0] === rota ? 'ativo' : ''}">${ic(m[1])}${m[2]}${m[0] === 'estoque' && baixos ? `<span class="badge">${baixos}</span>` : ''}${m[0] === 'usuarios' && pend ? `<span class="badge">${pend}</span>` : ''}</a>`).join('') : ''; }).join('');
-  $('#perfil').innerHTML = `<span class="avatar">${iniciais(S.usuario.nome)}</span><div class="who"><b>${S.usuario.nome}</b><small>${perfil().nome}</small></div><button title="Trocar usuário" onclick="sair()">${ic('log-out')}</button>`;
-  const nome = MENU.find(m => m[0] === rota)[2];
-  $('#topbar').innerHTML = `<div class="crumb">${ic('store', 'sm')} Doze Cosméticos ${ic('chevron-right', 'sm')} <b>${nome}</b></div><div class="sp"></div>
-    <div class="chip">${ic('calendar', 'sm')}${new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
-    <a class="chip" href="#caixas" style="text-decoration:none;color:inherit"><span class="dot" style="${S.caixa ? '' : 'background:var(--bad)'}"></span>Caixa ${S.caixa ? '#' + S.caixa.id + ' aberto' : 'fechado'}</a>`;
+  const badge = r => r === 'estoque' && baixos ? `<span class="badge" aria-label="${baixos} com estoque baixo">${baixos}</span>` : r === 'usuarios' && pend ? `<span class="badge" aria-label="${pend} aguardando aprovação">${pend}</span>` : '';
+  $('#menu').innerHTML = grupos.map(g => { const it = g.itens.filter(m => pode(m[0])); return it.length ? `<div class="nav-sec">${g.t}</div>` + it.map(m => `<a href="#${m[0]}" class="${m[0] === marcada ? 'ativo' : ''}" ${m[0] === marcada ? 'aria-current="page"' : ''} data-dica="${m[2]}">${ic(m[1])}<span class="rot">${m[2]}</span>${badge(m[0])}</a>`).join('') : ''; }).join('');
+  $('#perfil').innerHTML = `<span class="avatar" aria-hidden="true">${iniciais(S.usuario.nome)}</span><div class="who"><b>${S.usuario.nome}</b><small>${perfil().nome}</small></div><button title="Trocar usuário" aria-label="Sair e trocar de usuário" onclick="sair()">${ic('log-out')}</button>`;
+  $('#topbar').innerHTML = `<button class="icon-btn so-mobile" id="abrirMenu" aria-label="Abrir menu" onclick="menuMobile(true)">${ic('menu')}</button>
+    <button class="busca-btn" onclick="abrirBusca()" aria-label="Buscar produto, cliente ou venda (Ctrl+K)">${ic('search', 'sm')}<span>Buscar produto, cliente, venda…</span><kbd>Ctrl K</kbd></button>
+    <div class="sp"></div>
+    <span class="chip offline hidden" id="chipOffline">${ic('wifi-off', 'sm')}Sem internet</span>
+    ${htmlSino()}
+    <a class="chip" href="#caixas">${ic(S.caixa ? 'lock-open' : 'lock-keyhole', 'sm')}<span class="status-dot ${S.caixa ? 'ok' : 'bad'}" aria-hidden="true"></span><span class="rot-chip">Caixa ${S.caixa ? '#' + S.caixa.id + ' aberto' : 'fechado'}</span></a>`;
+  atualizarOnline();
+  document.title = `${ROTAS[rota][1]} · Doze Cosméticos`;
   graficos.forEach(g => g.destroy()); graficos = [];
+  menuMobile(false);
   TELAS[rota]();
   window.scrollTo(0, 0);
   if (rota === 'caixa') focarBipe();
@@ -177,6 +204,7 @@ document.addEventListener('keydown', e => {
   }
   if (e.key === 'Escape' && modalAberto) return fecharModal();
   if (rota === 'caixa' && !modalAberto) {
+    if (e.key === 'F3') { e.preventDefault(); const b = $('#bipe'); b && (b.focus(), b.select()); }
     if (e.key === 'F2') { e.preventDefault(); finalizarVenda(); }
     if (e.key === 'F4') { e.preventDefault(); const b = document.querySelector('#cliVenda')?.parentNode.querySelector('.dz-trigger'); b ? b.click() : 0; }
     if (e.key === 'Escape' && S.carrinho.length) { e.preventDefault(); cancelarVenda(); }
@@ -202,7 +230,7 @@ function bipar(cod) {
   const item = S.carrinho.find(i => i.id === p.id);
   if ((item ? item.qtd : 0) + 1 > p.estoque) { beep(false); toast(`Sem estoque de "${p.nome}" (disponível: ${p.estoque})`, true); return focarBipe(); }
   if (item) item.qtd++; else S.carrinho.push({ id: p.id, nome: p.nome, preco: p.preco, custo: p.custo, qtd: 1, ean: p.ean, categoria: p.categoria, marca: p.marca, variacao: p.variacao });
-  beep(true); S.ultimo = p.id;
+  beep(true); S.ultimo = p.id; S.ultimoT = Date.now();
   TELAS.caixa();
 }
 function escolherProduto(lista, termo) {
@@ -214,69 +242,18 @@ function totais() {
   const desc = Math.min(sub, S.desconto);
   return { sub, desc, total: Math.round((sub - desc) * 100) / 100, itens: S.carrinho.reduce((s, i) => s + i.qtd, 0) };
 }
+// Limpa o carrinho na hora; "Desfazer" traz tudo de volta
 function cancelarVenda() {
-  dialogo({ icone: 'trash-2', tom: 'bad', titulo: 'Cancelar esta venda?', texto: `Os ${totais().itens} itens serão removidos do carrinho. Nada é baixado do estoque.`, botoes: [{ label: 'Voltar', estilo: 'sec' }, { label: 'Cancelar venda', estilo: 'danger', acao: () => { S.carrinho = []; S.desconto = 0; S.recebido = ''; TELAS.caixa(); toast('Venda cancelada'); } }] });
+  const antes = { carrinho: S.carrinho, desconto: S.desconto, cliente: S.clienteVenda };
+  S.carrinho = []; S.desconto = 0; S.clienteVenda = null; TELAS.caixa();
+  toast('Venda cancelada. Nada saiu do estoque.', false, () => { S.carrinho = antes.carrinho; S.desconto = antes.desconto; S.clienteVenda = antes.cliente; if (location.hash === '#caixa') TELAS.caixa(); toast('Venda recuperada'); });
 }
 
 const TELAS = {};
-// ===== PAINEL =====
-TELAS.painel = () => {
-  const agora = new Date(), mes = agora.getMonth(), ano = agora.getFullYear();
-  const doMes = (m, a) => vendasValidas().filter(v => { const d = new Date(v.data); return d.getMonth() === m && d.getFullYear() === a; });
-  const vm = doMes(mes, ano), pm = mes === 0 ? 11 : mes - 1;
-  const va = doMes(pm, mes === 0 ? ano - 1 : ano).filter(v => new Date(v.data).getDate() <= agora.getDate());
-  const soma = l => l.reduce((s, v) => s + v.total, 0);
-  const fat = soma(vm), fatA = soma(va);
-  const custo = vm.reduce((s, v) => s + v.itens.reduce((a, i) => a + i.custo * i.qtd, 0), 0);
-  const hoje = vendasValidas().filter(v => v.data.slice(0, 10) === hojeISO());
-  const ontemD = new Date(); ontemD.setDate(ontemD.getDate() - 1);
-  const ontem = vendasValidas().filter(v => v.data.slice(0, 10) === ontemD.toISOString().slice(0, 10));
-  const ticket = vm.length ? fat / vm.length : 0, ticketA = va.length ? fatA / va.length : 0;
-  const rank = {}; vm.forEach(v => v.itens.forEach(i => { rank[i.id] = (rank[i.id] || 0) + i.qtd; }));
-  const top = Object.entries(rank).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([id, q]) => [S.produtos.find(p => p.id == id), q]);
-  const maxTop = top.length ? top[0][1] : 1;
-  const baixos = S.produtos.filter(p => p.estoque <= p.minimo);
-  const vendidos30 = new Set(vendasValidas().filter(v => (agora - new Date(v.data)) < 30 * 864e5).flatMap(v => v.itens.map(i => i.id)));
-  const parados = S.produtos.filter(p => !vendidos30.has(p.id) && p.estoque > 0);
-  const vencendo = S.produtos.filter(p => mesesAte(p.validade) <= 3);
-  const aniver = S.clientes.filter(c => +c.nasc.slice(5, 7) === mes + 1);
-  const h = agora.getHours(), saud = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
-  const pct = (a, b) => b ? (a / b - 1) * 100 : 0;
-  const alerta = (href, icone, tom, titulo, sub) => `<a class="list-item" href="${href}"><span class="ico-chip ${tom}">${ic(icone)}</span><span class="tx"><b>${titulo}</b><small>${sub}</small></span>${ic('chevron-right', 'sm')}</a>`;
-  $('#tela').innerHTML = `
-  ${head(`${saud}, <em>${S.usuario.nome.split(' ')[0]}</em>`, 'Este é o resumo da loja hoje e no mês.', `<a class="btn" href="#caixa">${ic('scan-barcode', 'sm')}Ir para o caixa</a>`)}
-  <div class="grid kpis">
-    ${kpi('shopping-bag', '', 'Vendas hoje', brl(soma(hoje)), `${delta(pct(soma(hoje), soma(ontem)))} ${hoje.length} vendas · vs ontem`)}
-    ${kpi('trending-up', 'terra', 'Faturamento do mês', brl(fat), `${delta(pct(fat, fatA))} vs mesmo período`)}
-    ${kpi('receipt', '', 'Ticket médio', brl(ticket), `${delta(pct(ticket, ticketA))} ${vm.length} vendas no mês`)}
-    ${perfil().verCusto ? kpi('piggy-bank', 'ok', 'Lucro bruto do mês', brl(fat - custo), `Margem de ${fat ? ((1 - custo / fat) * 100).toFixed(0) : 0}%`) : ''}
-  </div>
-  <div class="grid cols-2-1">
-    <div class="card"><div class="card-head"><h3>${ic('chart-column', 'sm')}Faturamento · últimos 30 dias</h3></div><div style="height:270px"><canvas id="gDias"></canvas></div></div>
-    <div class="card"><div class="card-head"><h3>${ic('credit-card', 'sm')}Formas de pagamento</h3><small class="muted">mês atual</small></div><div style="height:270px"><canvas id="gPag"></canvas></div></div>
-  </div>
-  <div class="grid cols-2-1" style="margin-top:16px">
-    <div class="card"><div class="card-head"><h3>${ic('award', 'sm')}Mais vendidos do mês</h3><a class="btn ghost" href="#produtos">Ver produtos ${ic('arrow-right', 'sm')}</a></div>
-      <div class="list">${top.map(([p, q], i) => `<div class="list-item"><span class="rank ${i < 3 ? 'top' : ''}">${i + 1}</span>${thumb(p.categoria, true)}<span class="tx"><b>${esc(p.nome)}</b><div class="bar"><i style="width:${q / maxTop * 100}%"></i></div></span><b class="num">${q} un.</b></div>`).join('')}</div></div>
-    <div class="card"><div class="card-head"><h3>${ic('bell', 'sm')}Precisa de atenção</h3></div>
-      <div class="list">
-        ${alerta('#estoque', 'triangle-alert', 'warn', `${baixos.length} produtos com estoque baixo`, 'Repor antes de acabar')}
-        ${alerta('#estoque', 'hourglass', 'bad', `${vencendo.length} vencendo em até 3 meses`, 'Boa hora para promoção')}
-        ${alerta('#produtos', 'snowflake', '', `${parados.length} sem venda há 30 dias`, 'Produtos parados')}
-        ${alerta('#clientes', 'cake', 'terra', `${aniver.length} aniversariantes no mês`, 'Mande um cupom de presente')}
-      </div></div>
-  </div>`;
-  Chart.defaults.font.family = 'Inter'; Chart.defaults.color = '#957f88';
-  const dias = [...Array(30)].map((_, i) => { const d = new Date(); d.setDate(d.getDate() - 29 + i); return d.toISOString().slice(0, 10); });
-  const porDia = dias.map(d => soma(vendasValidas().filter(v => v.data.slice(0, 10) === d)));
-  graficos.push(new Chart($('#gDias'), { type: 'bar', data: { labels: dias.map(d => d.slice(8) + '/' + d.slice(5, 7)), datasets: [{ data: porDia, backgroundColor: dias.map((d, i) => i === 29 ? '#c97b6b' : '#7d3150'), borderRadius: 6, maxBarThickness: 18 }] },
-    options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => brl(c.raw) } } }, scales: { x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } }, y: { border: { display: false }, grid: { color: '#f3e8e6' }, ticks: { callback: v => 'R$ ' + v } } } } }));
-  graficos.push(new Chart($('#gPag'), { type: 'doughnut', data: { labels: PAGAMENTOS.map(p => p[0]), datasets: [{ data: PAGAMENTOS.map(([p]) => vm.reduce((s, v) => s + v.pagamentos.filter(x => x.forma === p).reduce((a, x) => a + x.valor, 0), 0)), backgroundColor: ['#7d3150', '#c97b6b', '#e8c4c4', '#3a2630'], borderWidth: 3, borderColor: '#fff' }] },
-    options: { maintainAspectRatio: false, cutout: '68%', plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 14 } }, tooltip: { callbacks: { label: c => ' ' + c.label + ': ' + brl(c.raw) } } } } }));
-};
+// ===== PAINEL: ver painel.js =====
 
 // ===== PRODUTOS =====
-let filtroP = { busca: '', cat: '', marca: '', agrupar: true }, abertas = {};
+let filtroP = { busca: '', cat: '', marca: '', agrupar: true }, abertas = {}, limiteP = 50;
 TELAS.produtos = () => {
   $('#tela').innerHTML = `
   ${head('Produtos', `${S.produtos.length} produtos em ${CATEGORIAS.length} categorias e ${MARCAS.length} marcas`, `<button class="btn sec" onclick="importarPlanilha()">${ic('upload', 'sm')}Importar planilha</button><button class="btn" onclick="formProduto()">${ic('plus', 'sm')}Novo produto</button>`)}
@@ -286,6 +263,7 @@ TELAS.produtos = () => {
       <select class="campo" id="fCat"><option value="">Todas as categorias</option>${CATEGORIAS.map(c => `<option ${filtroP.cat === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
       <select class="campo" id="fMarca"><option value="">Todas as marcas</option>${MARCAS.map(c => `<option ${filtroP.marca === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
       <label class="check"><input type="checkbox" id="fAgr" ${filtroP.agrupar ? 'checked' : ''}> Agrupar variações</label>
+      ${htmlDensidade()}
     </div>
     <div class="tbl-wrap" id="tblProd"></div>
   </div>`;
@@ -299,24 +277,25 @@ function desenharProdutos() {
   const b = filtroP.busca.toLowerCase();
   const lista = S.produtos.filter(p => (!filtroP.cat || p.categoria === filtroP.cat) && (!filtroP.marca || p.marca === filtroP.marca) && (p.nome + p.ean + p.marca + (p.sku || '')).toLowerCase().includes(b));
   const vc = perfil().verCusto;
-  const linhaP = (p, filho) => `<tr class="${filho ? 'filho' : ''}"><td><div class="prod">${filho ? '<span class="ramo"></span>' : thumb(p.categoria)}<span><b>${esc(filho ? (p.variacao || p.nome) : p.nome)}</b><small>${filho ? '' : p.marca + (p.variacao ? ' · ' + p.variacao : '') + ' · '}<span class="code">${p.ean}</span> · ${p.sku || ''}</small></span></div></td><td>${filho ? '' : p.categoria}</td>
+  const linhaP = (p, filho) => `<tr class="${filho ? 'filho' : ''}"><td><div class="prod">${filho ? '<span class="ramo" aria-hidden="true">' + ic('corner-down-right', 'sm') + '</span>' : thumb(p.categoria)}<span><b>${esc(filho ? (p.variacao || p.nome) : p.nome)}</b><small>${filho ? '' : p.marca + (p.variacao ? ' · ' + p.variacao : '') + ' · '}<span class="code">${p.ean}</span> · ${p.sku || ''}</small></span></div></td><td>${filho ? '' : p.categoria}</td>
     ${vc ? `<td class="num muted">${brl(p.custo)}</td>` : ''}<td class="num"><b>${brl(p.preco)}</b></td>${vc ? `<td class="num">${((1 - p.custo / p.preco) * 100).toFixed(0)}%</td>` : ''}
     <td class="num">${p.estoque}</td><td>${statusEstoque(p)}</td><td><div class="row-actions"><button class="icon-btn" title="Ajustar estoque" onclick="ajustarEstoque(${p.id})">${ic('sliders-horizontal', 'sm')}</button><button class="icon-btn" title="Nova variação desta linha" onclick="formProduto(null, '', ${p.id})">${ic('copy-plus', 'sm')}</button><button class="icon-btn" title="Editar" onclick="formProduto(${p.id})">${ic('pencil', 'sm')}</button></div></td></tr>`;
-  let corpo;
+  let corpo, total;
   if (filtroP.agrupar) {
     const grupos = {}; lista.forEach(p => (grupos[p.linha || p.nome] = grupos[p.linha || p.nome] || []).push(p));
-    corpo = Object.entries(grupos).map(([nome, ps], gi) => {
+    const todos = Object.entries(grupos); total = todos.length;
+    corpo = todos.slice(0, limiteP).map(([nome, ps], gi) => {
       if (ps.length === 1) return linhaP(ps[0]);
       const est = ps.reduce((s, p) => s + p.estoque, 0), pr = [...new Set(ps.map(p => p.preco))];
       const baixo = ps.some(p => p.estoque <= p.minimo);
-      return `<tr class="grupo" data-g="${esc(nome)}"><td><div class="prod">${thumb(ps[0].categoria)}<span><b>${esc(nome)} ${ic(abertas[nome] ? 'chevron-up' : 'chevron-down', 'sm')}</b><small>${ps[0].marca} · ${ps.length} variações: ${ps.map(p => esc(p.variacao)).join(', ')}</small></span></div></td><td>${ps[0].categoria}</td>
+      return `<tr class="grupo" data-g="${esc(nome)}" tabindex="0" aria-expanded="${!!abertas[nome]}"><td><div class="prod">${thumb(ps[0].categoria)}<span><b>${esc(nome)} ${ic(abertas[nome] ? 'chevron-up' : 'chevron-down', 'sm')}</b><small>${ps[0].marca} · ${ps.length} variações: ${ps.map(p => esc(p.variacao)).join(', ')}</small></span></div></td><td>${ps[0].categoria}</td>
         ${vc ? `<td class="num muted">${brl(ps[0].custo)}</td>` : ''}<td class="num"><b>${pr.length === 1 ? brl(pr[0]) : 'a partir de ' + brl(Math.min(...pr))}</b></td>${vc ? '<td></td>' : ''}<td class="num"><b>${est}</b></td><td>${baixo ? '<span class="pill warn">Variação baixa</span>' : '<span class="pill ok">Disponível</span>'}</td><td></td></tr>
         ${abertas[nome] ? ps.map(p => linhaP(p, true)).join('') : ''}`;
     }).join('');
-  } else corpo = lista.map(p => linhaP(p)).join('');
-  $('#tblProd').innerHTML = lista.length ? `<table><thead><tr><th>Produto</th><th>Categoria</th>${vc ? '<th class="num">Custo</th>' : ''}<th class="num">Preço</th>${vc ? '<th class="num">Margem</th>' : ''}<th class="num">Estoque</th><th>Situação</th><th></th></tr></thead><tbody>${corpo}</tbody></table>`
-    : `<div class="empty"><div class="ring">${ic('search-x', 'xl')}</div><b>Nada encontrado</b>Tente outro nome ou limpe os filtros.</div>`;
-  $('#tblProd').querySelectorAll('tr.grupo').forEach(tr => tr.addEventListener('click', () => { const g = tr.dataset.g; abertas[g] = !abertas[g]; desenharProdutos(); }));
+  } else { total = lista.length; corpo = lista.slice(0, limiteP).map(p => linhaP(p)).join(''); }
+  $('#tblProd').innerHTML = lista.length ? `<table><thead><tr><th>Produto</th><th>Categoria</th>${vc ? '<th class="num">Custo</th>' : ''}<th class="num">Preço</th>${vc ? '<th class="num">Margem</th>' : ''}<th class="num">Estoque</th><th>Situação</th><th><span class="sr">Ações</span></th></tr></thead><tbody>${corpo}</tbody></table>${total > limiteP ? `<div class="mais"><button class="btn sec" onclick="limiteP+=50;desenharProdutos()">Carregar mais ${Math.min(50, total - limiteP)}</button><small class="muted">Mostrando ${limiteP} de ${total}</small></div>` : ''}`
+    : `<div class="empty"><div class="ring">${ic('search-x', 'xl')}</div><b>Nada encontrado</b>Nenhum produto com esse nome, código ou filtro.<div class="empty-acoes"><button class="btn sec" onclick="filtroP={busca:'',cat:'',marca:'',agrupar:filtroP.agrupar};TELAS.produtos()">${ic('x', 'sm')}Limpar filtros</button>${pode('produtos') ? `<button class="btn" onclick="formProduto(null, /^[0-9]{8,}$/.test(filtroP.busca) ? filtroP.busca : '')">${ic('plus', 'sm')}Cadastrar produto</button>` : ''}</div></div>`;
+  $('#tblProd').querySelectorAll('tr.grupo').forEach(tr => { const alterna = () => { const g = tr.dataset.g; abertas[g] = !abertas[g]; desenharProdutos(); }; tr.addEventListener('click', alterna); tr.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); alterna(); } }); });
 }
 function importarPlanilha() {
   dialogo({ icone: 'file-spreadsheet', tom: 'ok', titulo: 'Importar planilha', texto: 'No sistema real você envia um arquivo Excel ou CSV com código, nome, marca, categoria, custo, preço e estoque, e centenas de produtos entram de uma vez. O sistema avisa linhas com erro antes de salvar.', botoes: [{ label: 'Entendi' }] });
@@ -358,6 +337,12 @@ function salvarProduto(id) {
 
 // ===== ESTOQUE =====
 let modoEstoque = 'entrada', contagem = {};
+// Abas do estoque: os modos da tela + a página de movimentações
+function segEstoque(sel) {
+  const abas = [['entrada', 'package-plus', 'Entrada de mercadoria'], ['contagem', 'clipboard-check', 'Contagem'], ['alertas', 'triangle-alert', 'Alertas']];
+  return `<nav class="seg" aria-label="Seções do estoque">${abas.map(([k, i, n]) => `<button type="button" class="${sel === k ? 'sel' : ''}" ${sel === k ? 'aria-current="page"' : ''} onclick="irEstoque('${k}')">${ic(i, 'sm')}${n}</button>`).join('')}${pode('movimentacoes') ? `<a href="#movimentacoes" class="${sel === 'movs' ? 'sel' : ''}" ${sel === 'movs' ? 'aria-current="page"' : ''}>${ic('arrow-left-right', 'sm')}Movimentações</a>` : ''}</nav>`;
+}
+function irEstoque(modo) { modoEstoque = modo; contagem = {}; if (location.hash === '#estoque') TELAS.estoque(); else location.hash = 'estoque'; }
 TELAS.estoque = () => {
   const baixos = S.produtos.filter(p => p.estoque <= p.minimo);
   const vencendo = S.produtos.filter(p => mesesAte(p.validade) <= 3);
@@ -365,16 +350,15 @@ TELAS.estoque = () => {
   if (!podeMov) modoEstoque = 'consulta';
   else if (modoEstoque === 'consulta') modoEstoque = 'entrada';
   const un = S.produtos.reduce((s, p) => s + Math.max(0, p.estoque), 0);
-  const abas = [['entrada', 'package-plus', 'Entrada de mercadoria'], ['contagem', 'clipboard-check', 'Contagem'], ['alertas', 'triangle-alert', 'Alertas']];
   $('#tela').innerHTML = `
-  ${head('Estoque', podeMov ? 'Entrada, contagem e alertas, tudo pelo leitor de código de barras' : 'Consulta de estoque', podeMov ? `<a class="btn sec" href="#movimentacoes">${ic('history', 'sm')}Ver movimentações</a>` : '')}
+  ${head('Estoque', podeMov ? 'Entrada, contagem e alertas, tudo pelo leitor de código de barras' : 'Consulta de estoque', '')}
   <div class="grid kpis">
     ${perfil().verCusto ? kpi('coins', '', 'Valor em estoque (custo)', brl(S.produtos.reduce((s, p) => s + p.custo * Math.max(0, p.estoque), 0))) : ''}
     ${kpi('boxes', 'terra', 'Unidades em estoque', un.toLocaleString('pt-BR'), `${S.produtos.length} produtos`)}
     ${kpi('triangle-alert', 'warn', 'Estoque baixo', baixos.length, `${baixos.filter(p => p.estoque <= 0).length} zerados`)}
     ${kpi('hourglass', 'bad', 'Validade próxima', vencendo.length, 'em até 3 meses')}
   </div>
-  ${podeMov ? `<div class="seg">${abas.map(([k, i, n]) => `<button class="${modoEstoque === k ? 'sel' : ''}" onclick="modoEstoque='${k}';contagem={};TELAS.estoque()">${ic(i, 'sm')}${n}</button>`).join('')}</div>` : ''}
+  ${podeMov ? segEstoque(modoEstoque) : ''}
   <div id="estArea"></div>`;
   const area = $('#estArea');
   if (modoEstoque === 'entrada' || modoEstoque === 'contagem') {
@@ -389,8 +373,8 @@ TELAS.estoque = () => {
     desenharContagem();
   } else if (modoEstoque === 'alertas') {
     area.innerHTML = `<div class="grid cols-1-1">
-      <div class="card flush"><div class="card-head" style="padding-bottom:14px"><h3>${ic('triangle-alert', 'sm')}Estoque baixo ou zerado</h3><button class="btn sec" onclick="toast('Lista de compras gerada (simulação)')">${ic('list-checks', 'sm')}Lista de compra</button></div>
-        <table><thead><tr><th>Produto</th><th class="num">Atual / mín.</th><th></th></tr></thead><tbody>${baixos.map(p => `<tr><td><div class="prod" style="min-width:0">${thumb(p.categoria, true)}<span><b>${esc(p.nome)}</b><small>${p.marca}</small></span></div></td><td class="num">${p.estoque} / ${p.minimo}</td><td>${statusEstoque(p)}</td></tr>`).join('')}</tbody></table></div>
+      <div class="card flush"><div class="card-head" style="padding-bottom:14px"><h3>${ic('triangle-alert', 'sm')}Estoque baixo ou zerado</h3>${baixos.length && pode('compras') ? `<button class="btn sec" onclick="gerarPedidoCompra()">${ic('shopping-cart', 'sm')}Gerar pedido de compra</button>` : ''}</div>
+        <table><thead><tr><th>Produto</th><th class="num">Atual / mín.</th><th></th></tr></thead><tbody>${baixos.map(p => `<tr><td><div class="prod" style="min-width:0">${thumb(p.categoria, true)}<span><b>${esc(p.nome)}</b><small>${p.marca}</small></span></div></td><td class="num">${p.estoque} / ${p.minimo}</td><td>${statusEstoque(p)}</td></tr>`).join('') || `<tr><td colspan="3" class="muted">Nenhum produto com estoque baixo. Tudo abastecido.</td></tr>`}</tbody></table></div>
       <div class="card flush"><div class="card-head" style="padding-bottom:14px"><h3>${ic('hourglass', 'sm')}Validade próxima</h3></div>
         <table><thead><tr><th>Produto</th><th>Vence em</th></tr></thead><tbody>${vencendo.map(p => `<tr><td><div class="prod" style="min-width:0">${thumb(p.categoria, true)}<span><b>${esc(p.nome)}</b><small>${p.estoque} unidades</small></span></div></td><td><span class="pill ${mesesAte(p.validade) <= 1 ? 'bad' : 'warn'}">${fmtValidade(p.validade)}</span></td></tr>`).join('') || `<tr><td colspan="2" class="muted">Nenhum produto vencendo.</td></tr>`}</tbody></table></div></div>`;
   } else if (modoEstoque === 'historico') {
@@ -417,7 +401,7 @@ function desenharContagem() {
   el.innerHTML = `<div class="card flush"><table><thead><tr><th>Produto</th><th class="num">No sistema</th><th class="num">${ent ? 'Chegando' : 'Contado'}</th><th class="num">${ent ? 'Fica com' : 'Diferença'}</th></tr></thead><tbody>
   ${ids.map(id => { const p = S.produtos.find(x => x.id == id), c = contagem[id], dif = c - p.estoque;
     return `<tr class="${p.id === S.ultimoEst ? 'flash' : ''}"><td><div class="prod" style="min-width:0">${thumb(p.categoria, true)}<b>${esc(p.nome)}</b></div></td><td class="num">${p.estoque}</td><td class="num"><b>${ent ? '+' : ''}${c}</b></td><td class="num">${ent ? `<b>${p.estoque + c}</b>` : `<span class="pill ${dif === 0 ? 'ok' : 'bad'}">${dif === 0 ? 'Confere' : (dif > 0 ? '+' : '') + dif}</span>`}</td></tr>`; }).join('')}</tbody></table></div>
-  <div class="acoes"><button class="btn sec" onclick="contagem={};desenharContagem()">${ic('rotate-ccw', 'sm')}Recomeçar</button><button class="btn" onclick="confirmarEstoque()">${ic('check', 'sm')}${ent ? 'Confirmar entrada' : 'Ajustar estoque'}</button></div>`;
+  <div class="acoes"><button class="btn sec" onclick="recomecarContagem()">${ic('rotate-ccw', 'sm')}Recomeçar</button><button class="btn" onclick="confirmarEstoque()">${ic('check', 'sm')}${ent ? 'Confirmar entrada' : 'Ajustar estoque'}</button></div>`;
 }
 function confirmarEstoque() {
   const ent = modoEstoque === 'entrada';
@@ -490,7 +474,7 @@ TELAS.financeiro = () => {
     a.innerHTML = `<div class="card flush tbl-wrap"><table><thead><tr><th>Descrição</th><th>Tipo</th><th>Vencimento</th><th class="num">Valor</th><th>Situação</th><th></th></tr></thead><tbody>
     ${[...S.contas].sort((x, y) => x.vencimento.localeCompare(y.vencimento)).map(c => `<tr><td><div class="prod" style="min-width:0"><span class="ico-chip ${c.tipo === 'pagar' ? 'bad' : 'ok'}" style="width:34px;height:34px">${ic(c.tipo === 'pagar' ? 'arrow-up-right' : 'arrow-down-left', 'sm')}</span><b>${c.descricao}</b></div></td><td>${c.tipo === 'pagar' ? 'A pagar' : 'A receber'}</td><td>${c.vencimento.split('-').reverse().join('/')}</td><td class="num"><b>${brl(c.valor)}</b></td>
       <td>${c.pago ? '<span class="pill ok">Quitado</span>' : c.vencimento < hoje ? '<span class="pill bad">Vencido</span>' : '<span class="pill warn">Em aberto</span>'}</td>
-      <td><div class="row-actions">${c.pago ? '' : `<button class="btn sec" onclick="S.contas.find(x=>x.id===${c.id}).pago=true;toast('Baixa registrada');TELAS.financeiro()">${ic('check', 'sm')}Dar baixa</button>`}</div></td></tr>`).join('')}</tbody></table></div>`;
+      <td><div class="row-actions">${c.pago ? '' : `<button class="btn sec" onclick="darBaixa(${c.id})">${ic('check', 'sm')}Dar baixa</button>`}</div></td></tr>`).join('')}</tbody></table></div>`;
   } else {
     a.innerHTML = `<div class="card"><div class="card-head"><h3>${ic('lock', 'sm')}${S.caixa ? 'Caixa #' + S.caixa.id + ' aberto' : 'Caixa fechado'}</h3><a class="btn sec" href="#caixas">${ic('arrow-right', 'sm')}Abrir/fechar caixa</a></div>${S.caixa ? htmlResumoCaixa(S.caixa) : '<p class="muted">Abra o caixa na tela Abrir/fechar caixa.</p>'}</div>`;
   }
@@ -498,7 +482,7 @@ TELAS.financeiro = () => {
 
 // ===== USUÁRIOS =====
 TELAS.usuarios = () => {
-  const nomes = Object.fromEntries(MENU.filter(m => m[0] !== '§').map(m => [m[0], [m[1], m[2]]]));
+  const nomes = ROTAS;
   const perfis = Object.values(PERFIS);
   $('#tela').innerHTML = `
   ${head('Usuários e permissões', 'Cada pessoa vê só o que o perfil dela permite', `<button class="btn" onclick="toast('Convite enviado por e-mail (simulação)')">${ic('user-plus', 'sm')}Convidar usuário</button>`)}
@@ -581,3 +565,13 @@ window.addEventListener('resize', fecharDropdown);
 document.addEventListener('scroll', e => { if (ddAberto && !ddAberto.dd.contains(e.target)) fecharDropdown(); }, true);
 new MutationObserver(() => document.querySelectorAll('select:not([data-dz])').forEach(melhorarSelect)).observe(document.body, { childList: true, subtree: true });
 document.querySelectorAll('select').forEach(melhorarSelect);
+
+// Ações com "Desfazer"
+function recomecarContagem() {
+  const antes = { ...contagem }; contagem = {}; desenharContagem();
+  toast('Lista zerada', false, () => { contagem = antes; desenharContagem(); });
+}
+function darBaixa(id) {
+  const c = S.contas.find(x => x.id === id); c.pago = true; render();
+  toast(`Baixa registrada: ${c.descricao}`, false, () => { c.pago = false; render(); });
+}

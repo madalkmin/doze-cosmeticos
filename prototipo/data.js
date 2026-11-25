@@ -69,10 +69,10 @@ const USUARIOS = [
 const PERFIS = {
   admin:     { nome: 'Administrador', telas: ['painel','caixa','caixas','vendas','clientes','produtos','estoque','movimentacoes','compras','fornecedores','financeiro','relatorios','usuarios','configuracoes'], verCusto: true, cancelar: true, editarPreco: true },
   gerente:   { nome: 'Gerente',       telas: ['painel','caixa','caixas','vendas','clientes','produtos','estoque','movimentacoes','compras','fornecedores','financeiro','relatorios'], verCusto: true, cancelar: true, editarPreco: false },
-  vendedora: { nome: 'Vendedora',     telas: ['caixa','caixas','vendas','clientes','estoque'], verCusto: false, cancelar: false, editarPreco: false },
+  vendedora: { nome: 'Vendedora',     telas: ['painel','caixa','caixas','vendas','clientes','estoque'], verCusto: false, cancelar: false, editarPreco: false },
 };
 
-// Gera histórico de vendas dos últimos 60 dias
+// Gera histórico de vendas dos últimos 180 dias
 function gerarVendas() {
   const vendas = [];
   const pagamentos = ['Pix', 'Crédito', 'Débito', 'Dinheiro'];
@@ -80,7 +80,7 @@ function gerarVendas() {
   const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
   const hoje = new Date();
   let id = 1000;
-  for (let d = 59; d >= 0; d--) {
+  for (let d = 179; d >= 0; d--) {
     const dia = new Date(hoje); dia.setDate(hoje.getDate() - d);
     const n = 4 + Math.floor(rnd() * (dia.getDay() === 6 ? 14 : 9));
     for (let k = 0; k < n; k++) {
@@ -91,6 +91,7 @@ function gerarVendas() {
         itens.push({ id: p.id, nome: p.nome, preco: p.preco, custo: p.custo, qtd: 1 + (rnd() < 0.2 ? 1 : 0) });
       }
       const data = new Date(dia); data.setHours(9 + Math.floor(rnd() * 10), Math.floor(rnd() * 60));
+      if (data > hoje) continue; // hoje: só vendas até a hora atual
       const total = itens.reduce((s, i) => s + i.preco * i.qtd, 0);
       const cliente = rnd() < 0.5 ? CLIENTES[Math.floor(rnd() * CLIENTES.length)].id : null;
       const pg = pagamentos[Math.floor(rnd() * 4)];
@@ -120,4 +121,5 @@ const FORNECEDORES = [
 const CONFIG = {
   nome: 'DOZE COSMÉTICOS LTDA', cnpj: '00.000.000/0001-00', endereco: 'Rua Exemplo, 123 - Centro', cidade: 'Limeira', uf: 'SP', fone: '(19) 99999-0000',
   chavePix: 'pix@doze.com', nomePix: 'DOZE COSMETICOS', cidadePix: 'LIMEIRA', largura: 80, rodape: 'Obrigada pela preferência! Trocas em até 7 dias com o cupom.',
+  metaMes: 0, metaVendedora: 0, // 0 = calcular a partir do histórico
 };

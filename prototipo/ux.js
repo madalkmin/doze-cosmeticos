@@ -445,6 +445,9 @@ function avisarEanRepetido(inp, idAtual) {
   const checar = () => {
     const dup = eanEmUso(inp.value, idAtual);
     limparErro(inp);
+    // trava o botão Salvar enquanto o código estiver repetido
+    const salvar = [...document.querySelectorAll('#modalBox .acoes .btn:not(.sec)')].pop();
+    if (salvar) { salvar.disabled = !!dup; salvar.title = dup ? 'Código de barras já cadastrado' : ''; }
     if (dup) { inp.classList.add('invalido'); inp.setAttribute('aria-invalid', 'true'); (inp.closest('.field') || inp.parentNode).insertAdjacentHTML('beforeend', `<small class="erro-campo">${ic('circle-alert', 'sm')}Código já cadastrado em: ${esc(dup.nome)}${dup.variacao ? ' · ' + esc(dup.variacao) : ''}</small>`); }
   };
   // setTimeout: roda depois do listener global que limpa erros a cada digitação

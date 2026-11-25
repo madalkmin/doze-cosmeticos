@@ -210,40 +210,166 @@ function melhorarMoeda(inp) {
   inp.addEventListener('blur', () => { if (inp.value !== '' && !isNaN(+inp.value)) inp.value = (+inp.value).toFixed(2); });
 }
 
-// ----- Tabelas: ordenar pelo título e rótulos para o celular -----
-const ORDEM = {};
+// ----- Tabelas: ordenar e filtrar por coluna, título alinhado ao conteúdo -----
+// Vale para toda tabela das telas. A ordem e os filtros ficam guardados por tabela
+// enquanto o sistema está aberto, então continuam valendo quando a tela é redesenhada.
+const ORDEM = {}, FILTROS = {};
+// Telas com "Carregar mais": ao filtrar, carrega tudo para o filtro valer para todas as linhas
+const CARREGAR_TODOS = {
+  '#vendas': () => { limiteV = 1e9; TELAS.vendas(); },
+  '#produtos': () => { limiteP = 1e9; desenharProdutos(); },
+  '#movimentacoes': () => { limiteM = 1e9; TELAS.movimentacoes(); },
+};
 const valorCelula = td => {
   const t = (td ? td.innerText : '').trim();
   let m = t.match(/^(\d{2})\/(\d{2})\/(\d{2,4})(?:,?\s*(\d{2}):(\d{2}))?/); if (m) { const a = m[3].length === 2 ? '20' + m[3] : m[3]; return +new Date(+a, +m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0)); }
-  m = t.replace(/^a partir de\s*/, '').match(/^[−-]?\s*(R\$\s*)?[−-]?[\d.]+(,\d+)?/); if (m && /\d/.test(m[0])) { const n = +m[0].replace(/R\$|\s|\./g, '').replace(',', '.').replace('−', '-'); if (!isNaN(n)) return n; }
-  m = t.match(/^#?(\d+)/); if (m && /^#?\d+(\s|$|\/)/.test(t)) return +m[1];
+  m = t.replace(/^a partir de\s*/, '').match(/^[−-]?\s*(R\$\s*)?[−+-]?[\d.]+(,\d+)?/); if (m && /\d/.test(m[0])) { const n = +m[0].replace(/R\$|\s|\.|\+/g, '').replace(',', '.').replace('−', '-'); if (!isNaN(n)) return n; }
   return t.toLowerCase();
 };
+// Texto que representa a célula no filtro (o nome em destaque, sem detalhes; data sem hora)
+function textoFiltro(td) {
+  if (!td) return '';
+  const b = td.querySelector('.prod b') || td.querySelector('b');
+  let t = ((b && b.innerText) || td.innerText || '').trim().split('\n')[0].trim();
+  const m = t.match(/^(\d{2}\/\d{2}\/\d{2,4}),?\s+\d{2}:\d{2}/); if (m) t = m[1];
+  return t === '—' ? '' : t;
+}
+const chaveOrdem = t => { const m = t.match(/^(\d{2})\/(\d{2})\/(\d{2,4})$/); if (m) return (m[3].length === 2 ? '20' + m[3] : m[3]) + m[2] + m[1]; return t; };
+const blocosTabela = tb => { const bl = []; [...(tb.tBodies[0] || { rows: [] }).rows].forEach(tr => { if (tr.classList.contains('vazio-filtro')) return; tr.classList.contains('filho') && bl.length ? bl[bl.length - 1].push(tr) : bl.push([tr]); }); return bl; };
+const nomeColuna = th => (th.querySelector('.th-tx') || th).textContent.trim();
+const chaveTabela = (tb, ths) => location.hash + '|' + [...document.querySelectorAll('#tela table')].indexOf(tb) + '|' + ths.map(nomeColuna).join(',');
+
+function alinhamento(th, cel) {
+  if (th.classList.contains('num') || (cel && cel.classList.contains('num'))) return 'right';
+  const a = (th.style.textAlign || (cel && (cel.style.textAlign || getComputedStyle(cel).textAlign)) || 'left').replace('-webkit-', '');
+  return a === 'end' || a === 'right' ? 'right' : a === 'center' ? 'center' : 'left';
+}
 function melhorarTabela(tb) {
   if (tb.dataset.dz || tb.closest('.cupom') || tb.closest('#modalBox')) return;
   tb.dataset.dz = '1';
   const ths = [...tb.querySelectorAll('thead th')];
-  tb.querySelectorAll('tbody tr').forEach(tr => [...tr.children].forEach((td, i) => { const h = ths[i] && ths[i].innerText.trim(); if (h) td.dataset.rotulo = h; }));
+  tb.querySelectorAll('tbody tr').forEach(tr => [...tr.children].forEach((td, i) => { const h = ths[i] && ths[i].textContent.trim(); if (h) td.dataset.rotulo = h; }));
   if (tb.classList.contains('matrix')) return;
-  const chave = location.hash + '|' + ths.map(t => t.innerText.trim()).join(',');
+  const chave = chaveTabela(tb, ths), primeira = blocosTabela(tb).map(b => b[0]).find(tr => tr.cells.length === ths.length);
   ths.forEach((th, i) => {
-    const nome = th.innerText.trim(); if (!nome) return;
-    th.classList.add('ordenavel'); th.tabIndex = 0; th.setAttribute('role', 'columnheader');
-    th.setAttribute('aria-sort', ORDEM[chave] && ORDEM[chave][0] === i ? (ORDEM[chave][1] > 0 ? 'ascending' : 'descending') : 'none');
-    th.title = 'Ordenar por ' + nome.toLowerCase();
-    const ir = () => { const o = ORDEM[chave]; ORDEM[chave] = [i, o && o[0] === i ? -o[1] : (th.classList.contains('num') ? -1 : 1)]; ordenar(tb, chave, ths); };
-    th.addEventListener('click', ir); th.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ir(); } });
+    const nome = th.textContent.trim();
+    const al = alinhamento(th, primeira && primeira.cells[i]);
+    th.style.textAlign = al; th.dataset.al = al;
+    if (!nome || th.querySelector('.sr')) return;
+    th.innerHTML = `<span class="th-in ${al}"><span class="th-tx">${esc(nome)}</span><span class="th-ord" aria-hidden="true"></span><button type="button" class="th-filtro" aria-haspopup="dialog" aria-label="Filtrar e ordenar por ${esc(nome.toLowerCase())}" title="Filtrar e ordenar">${ic('list-filter', 'sm')}</button></span>`;
+    th.classList.add('ordenavel'); th.tabIndex = 0;
+    th.title = 'Clique para ordenar por ' + nome.toLowerCase();
+    const ordenarAqui = () => { const o = ORDEM[chave]; ORDEM[chave] = [i, o && o[0] === i ? -o[1] : (al === 'right' ? -1 : 1)]; ordenar(tb, chave); };
+    th.addEventListener('click', e => { if (!e.target.closest('.th-filtro')) ordenarAqui(); });
+    th.addEventListener('keydown', e => { if (e.target === th && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); ordenarAqui(); } });
+    th.querySelector('.th-filtro').addEventListener('click', e => { e.stopPropagation(); abrirFiltro(tb, i, chave); });
   });
-  if (ORDEM[chave]) ordenar(tb, chave, ths);
+  marcarCabecalho(tb, chave);
+  if (ORDEM[chave]) ordenar(tb, chave);
+  aplicarFiltros(tb, chave);
 }
-function ordenar(tb, chave, ths) {
+function ordenar(tb, chave) {
   const [i, dir] = ORDEM[chave], corpo = tb.tBodies[0]; if (!corpo) return;
-  // linhas "filho" (variações) andam junto com a linha do grupo
-  const blocos = []; [...corpo.rows].forEach(tr => tr.classList.contains('filho') && blocos.length ? blocos[blocos.length - 1].push(tr) : blocos.push([tr]));
-  blocos.sort((a, b) => { const x = valorCelula(a[0].cells[i]), y = valorCelula(b[0].cells[i]); return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'pt-BR')) * dir; });
+  const blocos = blocosTabela(tb);
+  blocos.sort((a, b) => { const x = valorCelula(a[0].cells[i]), y = valorCelula(b[0].cells[i]); return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'pt-BR', { numeric: true })) * dir; });
   blocos.forEach(b => b.forEach(tr => corpo.appendChild(tr)));
-  ths.forEach((th, k) => { th.setAttribute('aria-sort', k === i ? (dir > 0 ? 'ascending' : 'descending') : 'none'); th.classList.toggle('asc', k === i && dir > 0); th.classList.toggle('desc', k === i && dir < 0); });
+  const vz = corpo.querySelector('.vazio-filtro'); if (vz) corpo.appendChild(vz);
+  marcarCabecalho(tb, chave);
 }
+function marcarCabecalho(tb, chave) {
+  const o = ORDEM[chave], f = FILTROS[chave] || {};
+  tb.querySelectorAll('thead th').forEach((th, k) => {
+    if (!th.classList.contains('ordenavel')) return;
+    const dir = o && o[0] === k ? o[1] : 0;
+    th.setAttribute('aria-sort', dir > 0 ? 'ascending' : dir < 0 ? 'descending' : 'none');
+    th.querySelector('.th-ord').innerHTML = dir ? ic(dir > 0 ? 'arrow-up' : 'arrow-down', 'sm') : '';
+    const ativo = !!f[k]; th.classList.toggle('filtrado', ativo);
+    const b = th.querySelector('.th-filtro'); b.classList.toggle('ativo', ativo); b.setAttribute('aria-pressed', ativo);
+  });
+}
+function aplicarFiltros(tb, chave) {
+  const f = FILTROS[chave] || {}, ativos = Object.entries(f).filter(([, s]) => s), ths = [...tb.querySelectorAll('thead th')];
+  tb.querySelectorAll('tr.vazio-filtro').forEach(r => r.remove());
+  const pai = tb.parentNode; pai.querySelectorAll(':scope > .filtro-status').forEach(x => x.remove());
+  let vis = 0, tot = 0;
+  blocosTabela(tb).forEach(b => { tot++; const ok = ativos.every(([i, s]) => s.has(textoFiltro(b[0].cells[i]))); b.forEach(tr => tr.hidden = !ok); if (ok) vis++; });
+  marcarCabecalho(tb, chave);
+  if (!ativos.length) return;
+  if (!vis) tb.tBodies[0].insertAdjacentHTML('beforeend', `<tr class="vazio-filtro"><td colspan="${ths.length}"><div class="empty" style="padding:28px 10px"><b>Nenhuma linha com esses filtros</b>Mude a seleção nas colunas marcadas ou limpe os filtros.</div></td></tr>`);
+  tb.insertAdjacentHTML('afterend', `<div class="filtro-status" role="status">${ic('list-filter', 'sm')}<span>Mostrando <b>${vis}</b> de ${tot} · filtrado por ${ativos.map(([i]) => `<b>${esc(nomeColuna(ths[i]).toLowerCase())}</b>`).join(', ')}</span><button type="button" class="btn ghost sm">${ic('x', 'sm')}Limpar filtros</button></div>`);
+  tb.nextElementSibling.querySelector('button').onclick = () => { FILTROS[chave] = {}; aplicarFiltros(tb, chave); };
+}
+
+// Janela do funil: ordenar, buscar valores, marcar vários, aplicar
+let FILTRO_ABERTO = null;
+function abrirFiltro(tb, i, chave) {
+  fecharFiltro();
+  // tabela com "Carregar mais": carrega tudo antes, para o filtro ver todas as linhas
+  const carregar = CARREGAR_TODOS[location.hash];
+  if (carregar && tb.parentNode.querySelector('.mais')) {
+    const idx = [...document.querySelectorAll('#tela table')].indexOf(tb);
+    carregar();
+    return setTimeout(() => { const nt = document.querySelectorAll('#tela table')[idx]; if (!nt) return; melhorarTabela(nt); abrirFiltro(nt, i, chaveTabela(nt, [...nt.querySelectorAll('thead th')])); }, 30);
+  }
+  const ths = [...tb.querySelectorAll('thead th')], th = ths[i], nome = nomeColuna(th), btn = th.querySelector('.th-filtro');
+  const cont = new Map(); blocosTabela(tb).forEach(b => { const v = textoFiltro(b[0].cells[i]); cont.set(v, (cont.get(v) || 0) + 1); });
+  const amostra = blocosTabela(tb).map(b => b[0].cells[i]).find(Boolean);
+  const numerica = amostra && typeof valorCelula(amostra) === 'number';
+  const valores = [...cont.keys()].sort((a, b) => numerica ? (valorCelula({ innerText: a }) - valorCelula({ innerText: b })) : chaveOrdem(a).localeCompare(chaveOrdem(b), 'pt-BR', { numeric: true }));
+  const atual = (FILTROS[chave] || {})[i];
+  const sel = new Set(atual ? [...atual].filter(v => cont.has(v)) : valores);
+  const o = ORDEM[chave], dir = o && o[0] === i ? o[1] : 0;
+  const pop = document.createElement('div');
+  pop.className = 'filtro-pop'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', 'Filtrar ' + nome);
+  pop.innerHTML = `<div class="fp-topo"><b>${esc(nome)}</b><small class="muted">${valores.length} valor${valores.length === 1 ? '' : 'es'}</small></div>
+    <div class="fp-ord" role="group" aria-label="Ordenar"><button type="button" data-o="1" class="${dir > 0 ? 'sel' : ''}" aria-pressed="${dir > 0}">${ic(numerica ? 'arrow-up-1-0' : 'arrow-up-a-z', 'sm')}${numerica ? 'Menor primeiro' : 'A → Z'}</button><button type="button" data-o="-1" class="${dir < 0 ? 'sel' : ''}" aria-pressed="${dir < 0}">${ic(numerica ? 'arrow-down-1-0' : 'arrow-down-z-a', 'sm')}${numerica ? 'Maior primeiro' : 'Z → A'}</button></div>
+    <div class="fp-busca">${ic('search', 'sm')}<input type="text" placeholder="Buscar valor" aria-label="Buscar valor em ${esc(nome.toLowerCase())}" autocomplete="off"></div>
+    <label class="fp-op fp-todos"><input type="checkbox"><span>Selecionar todos</span><small></small></label>
+    <div class="fp-lista" role="group" aria-label="Valores"></div>
+    <div class="fp-rodape"><button type="button" class="btn ghost sm" data-acao="limpar">Limpar</button><span class="fp-aviso"></span><button type="button" class="btn sm" data-acao="aplicar">${ic('check', 'sm')}Aplicar</button></div>`;
+  document.body.appendChild(pop);
+  const lista = pop.querySelector('.fp-lista'), busca = pop.querySelector('.fp-busca input'), todos = pop.querySelector('.fp-todos input'), aplicarBtn = pop.querySelector('[data-acao=aplicar]');
+  let visiveis = valores;
+  const desenhar = () => {
+    lista.innerHTML = visiveis.length ? visiveis.map((v, k) => `<label class="fp-op"><input type="checkbox" data-k="${valores.indexOf(v)}" ${sel.has(v) ? 'checked' : ''}><span>${v ? esc(v) : '<i class="muted">(vazio)</i>'}</span><small>${cont.get(v)}</small></label>`).join('') : `<div class="fp-vazio">Nenhum valor com “${esc(busca.value)}”</div>`;
+    const marcados = visiveis.filter(v => sel.has(v)).length;
+    todos.checked = visiveis.length > 0 && marcados === visiveis.length; todos.indeterminate = marcados > 0 && marcados < visiveis.length;
+    pop.querySelector('.fp-todos span').textContent = busca.value ? 'Selecionar os encontrados' : 'Selecionar todos';
+    pop.querySelector('.fp-todos small').textContent = visiveis.length;
+    aplicarBtn.disabled = sel.size === 0; pop.querySelector('.fp-aviso').textContent = sel.size === 0 ? 'Marque ao menos um' : `${sel.size} de ${valores.length}`;
+  };
+  lista.addEventListener('change', e => { const v = valores[+e.target.dataset.k]; e.target.checked ? sel.add(v) : sel.delete(v); desenhar(); });
+  todos.addEventListener('change', () => { visiveis.forEach(v => todos.checked ? sel.add(v) : sel.delete(v)); desenhar(); });
+  busca.addEventListener('input', () => { const t = busca.value.trim().toLowerCase(); visiveis = valores.filter(v => v.toLowerCase().includes(t)); desenhar(); });
+  const aplicar = () => {
+    if (!sel.size) return;
+    FILTROS[chave] = FILTROS[chave] || {};
+    FILTROS[chave][i] = sel.size === valores.length ? null : new Set(sel);
+    fecharFiltro(); aplicarFiltros(tb, chave); btn.focus();
+  };
+  aplicarBtn.onclick = aplicar;
+  pop.querySelector('[data-acao=limpar]').onclick = () => { if (FILTROS[chave]) FILTROS[chave][i] = null; fecharFiltro(); aplicarFiltros(tb, chave); btn.focus(); };
+  pop.querySelectorAll('.fp-ord button').forEach(b => b.onclick = () => { ORDEM[chave] = [i, +b.dataset.o]; ordenar(tb, chave); fecharFiltro(); btn.focus(); });
+  pop.addEventListener('keydown', e => {
+    e.stopPropagation();
+    if (e.key === 'Escape') { e.preventDefault(); fecharFiltro(); btn.focus(); }
+    if (e.key === 'Enter' && e.target === busca) { e.preventDefault(); if (busca.value) { sel.clear(); visiveis.forEach(v => sel.add(v)); } aplicar(); }
+  });
+  desenhar();
+  // posição: logo abaixo do funil, sem sair da tela
+  const r = btn.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+  let left = th.dataset.al === 'right' ? r.right - w : r.left - 10; left = Math.max(8, Math.min(left, innerWidth - w - 8));
+  let top = r.bottom + 6; if (top + h > innerHeight - 8 && r.top > h + 12) top = r.top - h - 6;
+  pop.style.left = left + 'px'; pop.style.top = top + 'px';
+  btn.setAttribute('aria-expanded', 'true');
+  FILTRO_ABERTO = { pop, btn };
+  busca.focus();
+}
+function fecharFiltro() { if (!FILTRO_ABERTO) return; FILTRO_ABERTO.pop.remove(); FILTRO_ABERTO.btn.setAttribute('aria-expanded', 'false'); FILTRO_ABERTO = null; }
+document.addEventListener('mousedown', e => { if (FILTRO_ABERTO && !FILTRO_ABERTO.pop.contains(e.target) && !FILTRO_ABERTO.btn.contains(e.target)) fecharFiltro(); });
+addEventListener('resize', fecharFiltro);
+document.addEventListener('scroll', e => { if (FILTRO_ABERTO && !FILTRO_ABERTO.pop.contains(e.target)) fecharFiltro(); }, true);
+addEventListener('hashchange', fecharFiltro);
 
 // ----- Acessibilidade: botões só com ícone ganham nome -----
 function rotularBotoes(raiz) {

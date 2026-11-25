@@ -22,7 +22,8 @@ Sistema web interno da loja (uso da equipe, não é loja virtual).
 - **Uso:** site acessível de qualquer lugar; foco é o computador do caixa (tela otimizada pra teclado + leitor).
 - **Catálogo grande:** cadastro robusto com categorias/subcategorias, marcas, variações (cor/tom/tamanho), preço de custo/venda, margem, fotos, busca rápida, importação por planilha.
 - **Cartão:** maquininha separada; sistema só registra forma de pagamento (e parcelas/taxa pro financeiro).
-- **Stack:** Next.js + Supabase.
+- **Stack:** front estático (HTML/JS ou React + Vite build) + backend PHP (Laravel) com API em `/api` + banco MySQL.
+- **Hospedagem:** HostGator (cPanel; PHP + MySQL; sem Node na hospedagem compartilhada). SSL ativo por causa do login.
 
 - **Permissões:** sim. Perfis iniciais: Administrador (tudo), Gerente (sem config. de usuários), Vendedora (caixa, clientes, consulta de estoque; sem financeiro/custos).
 - Cupom = DANFE NFC-e em impressora térmica (ou envio por WhatsApp).

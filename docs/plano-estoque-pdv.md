@@ -1,6 +1,6 @@
 # Plano: trazer o estoque-pdv para o sistema Doze
 
-Comparação entre o **estoque-pdv** (React + Vite + Supabase, `Desktop/estoque-pdv`) e o **protótipo Doze** (`prototipo/`, HTML/JS puro, dados fictícios em memória). Não analisei o backend Supabase em si, só o que o front usa dele.
+Comparação entre o **estoque-pdv** (React + Vite + Supabase, `Desktop/estoque-pdv`) e o **protótipo Doze** (`prototipo/`, HTML/JS puro, dados fictícios em memória). Não analisei o backend Supabase em si, só o que o front usa dele. **Decisão (25/11/2026):** a Doze usará MySQL + PHP na HostGator, não Supabase.
 
 ## Decisão principal (antes de tudo)
 **Opção A, recomendada: usar o estoque-pdv como base do sistema Doze.** Ele já é um sistema de verdade (login, banco, várias máquinas sincronizadas, cupom térmico, Pix). Aplica-se o tema Botânica Rosé pelo `src/tema.js` e acrescenta-se o que só o Doze tem.
@@ -84,7 +84,7 @@ O plano abaixo assume a opção A.
 | Desconto | em R$ | em R$ | igual; avaliar % também |
 
 ## 4. Fases sugeridas
-1. **Base**: copiar o estoque-pdv para o projeto Doze, novo projeto Supabase, aplicar o tema Botânica Rosé (cores, Fraunces/Inter, símbolo escolhido).
+1. **Base**: copiar o estoque-pdv para o projeto Doze, trocar o Supabase por API PHP (Laravel) + MySQL na HostGator (recriar tabelas, login e permissões que vinham do Supabase), aplicar o tema Botânica Rosé (cores, Fraunces/Inter, símbolo escolhido).
 2. **Perfis**: acrescentar Gerente e a tabela de permissões.
 3. **Produto fiscal e cosmético**: campos NCM/CEST/CFOP/CSOSN/origem, validade/lote, importação por planilha (cadastro do sistema antigo ou XMLs).
 4. **Estoque por bipe**: entrada e contagem/inventário.
